@@ -407,11 +407,34 @@ func routes() http.Handler {
 	})
 
 	// Tiny logging middleware.
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	logging := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 		mux.ServeHTTP(sw, r)
 		log.Printf("%s %s %s → %d (%s)", r.RemoteAddr, r.Method, r.URL.Path, sw.status, time.Since(start))
+	})
+
+	// CORS middleware (outermost): lets browsers call this API from any origin.
+	return corsMiddleware(logging)
+}
+
+// corsMiddleware adds permissive CORS headers and short-circ OPTIONS preflight.
+// Allow-origin is "*" (any source). X-API-Key and Content-Type are exposed so
+// secure-route preflights from the browser succeed.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("Access-Control-Allow-Origin", "*")
+		h.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		h.Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+		h.Set("Access-Control-Max-Age", "86400") // cache preflight for a day
+
+		// Preflight: respond immediately, don't touch the DB.
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent) // 204
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
