@@ -78,25 +78,48 @@ type ItemOut struct {
 
 var db *sql.DB
 
-// openDB opens the SQLite file and verifies write access by running a no-op
-// transaction. Returns an error if the DB is read-only.
+// sqliteDSN builds a modernc.org/sqlite DSN that allows writes only when the
+// file/dir are genuinely writable (no silent readonly fallthrough).
+func sqliteDSN() string {
+	return "file:" + dbPath +
+		"?_pragma=busy_timeout(5000)" +
+		"&_pragma=journal_mode(WAL)" +
+		"&_txlock=immediate"
+}
+
+// openDB opens the SQLite file and verifies write access with a REAL write
+// (insert into a temp table, then drop it) wrapped in a transaction. This
+// catches read-only files that a CREATE-TABLE-IF-NOT-EXISTS probe would miss.
 func openDB() (*sql.DB, error) {
-	conn, err := sql.Open("sqlite", dbPath)
+	conn, err := sql.Open("sqlite", sqliteDSN())
 	if err != nil {
 		return nil, err
 	}
-	// Probe write access cheaply: CREATE TABLE IF NOT EXISTS writes to the file.
-	if _, err := conn.Exec(
-		`CREATE TABLE IF NOT EXISTS items (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			payload    TEXT    NOT NULL,
-			scope      TEXT    NOT NULL DEFAULT 'public',
-			created_at TEXT    NOT NULL DEFAULT (datetime('now'))
-		);`,
-	); err != nil {
+	// Real write probe: this fails on a readonly file/dir.
+	if _, err := conn.Exec(`CREATE TABLE IF NOT EXISTS items (
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		payload    TEXT    NOT NULL,
+		scope      TEXT    NOT NULL DEFAULT 'public',
+		created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+	);`); err != nil {
 		conn.Close()
 		return nil, err
 	}
+	tx, err := conn.Begin()
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if _, err := tx.Exec(`CREATE TABLE IF NOT EXISTS _wprobe (x INTEGER); DELETE FROM _wprobe;`); err != nil {
+		tx.Rollback()
+		conn.Close()
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	_, _ = conn.Exec(`DROP TABLE IF EXISTS _wprobe;`)
 	return conn, nil
 }
 
@@ -117,18 +140,22 @@ func initDB() {
 
 	conn, err := openDB()
 	if err != nil {
-		// Stale/foreign-owned file we can't fix by chmod → back it up & start fresh.
+		// Stale/foreign-owned file we can't write → back it up & start fresh.
 		// Keeps old data accessible (renamed) while letting the server boot & write.
 		log.Printf("initDB: cannot write existing %s (%v) — backing up & recreating", dbPath, err)
-		backup := dbPath + ".stale-" + time.Now().Format("20060102-150405")
-		if renameErr := os.Rename(dbPath, backup); renameErr != nil {
-			log.Fatalf("initDB: cannot rename stale db (%v) and cannot write it (%v)", renameErr, err)
+		stamp := time.Now().Format("20060102-150405")
+		// Move the db file + any WAL/journal sidecars out of the way.
+		for _, suffix := range []string{"", "-wal", "-shm", "-journal"} {
+			src := dbPath + suffix
+			if _, statErr := os.Stat(src); statErr == nil {
+				_ = os.Rename(src, src+".stale-"+stamp)
+			}
 		}
 		conn, err = openDB()
 		if err != nil {
 			log.Fatalf("initDB: fresh open failed: %v", err)
 		}
-		log.Printf("initDB: started fresh DB (old data backed up at %s)", backup)
+		log.Printf("initDB: started fresh DB (old files backed up with .stale-%s)", stamp)
 	}
 	db = conn
 
