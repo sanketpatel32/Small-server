@@ -1,33 +1,43 @@
-# Fly.io config for Small-Server
-# Docs: https://fly.io/docs/reference/configuration/
-app = "small-server"
-primary_region = "ams"   # Amsterdam — change to your nearest region (e.g. iad, sea, lhr)
+# fly.toml app configuration file generated for small-server on 2026-07-02T08:36:56+05:30
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'small-server'
+primary_region = 'ams'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  DB_PATH = "/data/data.db"
-  PORT    = "8080"
+  DB_PATH = '/data/data.db'
+  PORT = '8080'
 
-# Persistent volume so SQLite (data.db) survives restarts & deploys.
-# Create it once with:  fly volumes create small_server_data --size 1
-[mount]
-  source     = "small_server_data"
-  destination = "/data"
+[[mounts]]
+  source = 'small_server_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 8080
-  force_https   = true
-  auto_stop_machines = true      # scale to zero when idle (saves free allowance)
+  force_https = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
 
+  # Give uvicorn time to bind on cold start before Fly declares the port dead.
+  [[http_service.checks]]
+    interval = '10s'
+    timeout = '5s'
+    grace_period = '20s'
+    method = 'GET'
+    path = '/health'
+    protocol = 'http'
+
   [http_service.concurrency]
-    type            = "requests"
-    soft_limit      = 250
-    hard_limit      = 500
+    type = 'requests'
+    hard_limit = 500
+    soft_limit = 250
 
 [[vm]]
-  size = "shared-cpu-1x"         # fits in the free allowance
-  memory = "512mb"
+  size = 'shared-cpu-1x'
+  memory = '512mb'

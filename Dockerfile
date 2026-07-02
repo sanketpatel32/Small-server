@@ -20,7 +20,10 @@ VOLUME ["/data"]
 
 ENV DB_PATH=/data/data.db \
     PORT=8080 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    PATH="/app/.venv/bin:$PATH"
 
-# uv prepends its venv to PATH automatically; run via `uv run` for safety
-CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run the venv's uvicorn directly — no `uv run` overhead on cold start.
+# (The 3-4s cold-start delay from `uv run` was tripping Fly's "not listening
+# on port" health check, since uv re-resolves the project on every boot.)
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
