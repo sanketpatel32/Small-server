@@ -1,44 +1,56 @@
 # Small-Server
 
-A tiny, dependency-light REST API testing server. Built with **FastAPI** + **SQLite** (stdlib). Perfect for testing webhooks in Postman, firing payloads from your AI agents, or just having a scratch API to develop against.
+A tiny, ultra-light REST API testing server. Built with **Go** (stdlib net/http) + **SQLite** (pure-Go driver, no CGO). Perfect for testing webhooks in Postman/Bruno, firing payloads from your AI agents, or just having a scratch API to develop against.
 
-- ⚡ **One command to start** — `uv` auto-installs deps
+- ⚡ **Single static binary** — ~15MB, no runtime, no dependencies to install
+- 🐧 **Cross-platform** — builds for Linux/macOS/Windows from one codebase
 - 🗃️ **SQLite** file DB (no separate server, zero config)
 - 📦 **Accepts ANY JSON payload** — objects, arrays, nested structs, strings, numbers, booleans, even `null`
 - 🔐 **4 endpoints** — public + API-key-secured, each with GET & POST
 - 🌐 **Built-in UI** — test everything at `http://localhost:8795/`
-- 📚 **Free Swagger docs** at `/docs`
 - 🔌 **Uncommon port 8795** — won't clash with your other dev servers
 
 ---
 
 ## 🚀 Quick start
 
-### Option A — `uv` (recommended, fastest)
+### Option A — `go run` (recommended if you have Go)
 
 ```bash
-uv run uvicorn main:app --host 0.0.0.0 --port 8795 --reload
+go run .
 ```
 
-`uv` reads `pyproject.toml`, spins up an isolated env, installs FastAPI + uvicorn, and starts the server. No venv juggling.
+Open → **http://localhost:8795**
 
-### Option B — One-click scripts
+### Option B — Build a binary
+
+```bash
+# native binary (Linux/macOS)
+go build -o small-server .
+./small-server
+
+# Windows
+go build -o small-server.exe .
+small-server.exe
+```
+
+### Option C — One-click scripts
 
 | Platform | Command |
 |---|---|
 | **Windows** | double-click `run.bat` (or run it in a terminal) |
 | **macOS / Linux / Git Bash** | `./run.sh` |
 
-Both scripts auto-detect `uv` and fall back to plain `python -m pip` if it's missing.
+Both scripts auto-detect Go and fall back to a prebuilt binary if present.
 
-### Option C — Plain Python
+### Change the port / DB location / API key
 
 ```bash
-python -m pip install -r requirements.txt
-python main.py
+# env vars (all optional, these are the defaults)
+PORT=8795
+DB_PATH=./data.db
+API_KEY=secret-key-123
 ```
-
-Once running, open → **http://localhost:8795**
 
 ---
 
@@ -74,7 +86,7 @@ Base URL: `http://localhost:8795`
 | `GET`  | `/secure/items` | `X-API-Key` | List secure items |
 | `POST` | `/secure/items` | `X-API-Key` | Store **any** JSON payload |
 | `GET`  | `/` | — | Built-in testing UI |
-| `GET`  | `/docs` | — | Swagger UI (auto-generated) |
+| `GET`  | `/openapi.json` | — | OpenAPI 3.1 schema (for importers) |
 
 ### Request body (POST endpoints) — accepts ANYTHING
 
@@ -107,11 +119,11 @@ Every stored item looks like this — `payload` is exactly what you sent:
   "id": 1,
   "payload": { "event": "user.signup", "user": { "id": 42 }, "tags": ["new"] },
   "scope": "public",
-  "created_at": "2026-06-30 12:34:56"
+  "created_at": "2026-07-02 12:34:56"
 }
 ```
 
-GET endpoints return an array of these.
+GET endpoints return an array of these (empty DB → `[]`, not `null`).
 
 ---
 
@@ -163,14 +175,7 @@ curl http://localhost:8795/secure/items
    - **Bruno** → Collection → Import → choose the file.
 3. Open any request, hit **Send**. Done.
 
-> Works in Postman **and** Bruno out of the box. The previous version used `{{variables}}` + a pre-request script that broke in Bruno (`ReferenceError: pm is not defined`) — those are gone. If you change the port or API key, edit them directly in the request URLs / headers (or in `main.py`).
-
-### What's inside
-
-- **7 requests** across Meta / Public / Secure folders.
-- **Hardcoded values** — `http://localhost:8795` URLs and `X-API-Key: secret-key-123` on secure routes only.
-- **Tests** on every request: Health → 200 + `status == "ok"` · GET lists → 200 + array · POST → 201 + payload echoed / `scope` correct.
-- **Example responses** on each request so the preview is populated.
+> Works in Postman **and** Bruno out of the box.
 
 ### Run the whole collection from CLI (Newman)
 
@@ -185,7 +190,7 @@ Expected: `7 requests, 10 assertions, 0 failed` — no `--env-var` flags needed.
 
 ## ☁️ Deploy to Fly.io
 
-Small-Server is Fly.io-ready. SQLite is persisted via a Fly **volume** so your data survives restarts and deploys. A `Dockerfile` and `fly.toml` are included.
+Small-Server is Fly.io-ready. SQLite is persisted via a Fly **volume** so your data survives restarts and deploys. A `Dockerfile` (multi-stage Go build) and `fly.toml` are included.
 
 ### Prerequisites
 
@@ -195,8 +200,8 @@ Small-Server is Fly.io-ready. SQLite is persisted via a Fly **volume** so your d
 ### Deploy steps
 
 ```bash
-# 1. Create the app (choose a unique name, pick your region)
-fly launch --no-deploy        # uses the included fly.toml + Dockerfile
+# 1. Create the app (uses the included Dockerfile + fly.toml)
+fly launch --no-deploy
 
 # 2. Create a 1GB persistent volume for SQLite (one-time)
 fly volumes create small_server_data --size 1
@@ -210,21 +215,19 @@ fly deploy
 
 When it finishes you'll get a URL like `https://small-server.fly.dev`. Open it → the test UI loads. Done.
 
-> **Region:** the included `fly.toml` uses `bom` (Mumbai). Change it to your nearest — `iad` (US East), `sea` (US West), `lhr` (London), `sin` (Singapore), etc. — in `fly.toml` before `fly launch`.
-
-> **App name:** `fly.toml` has `app = "small-server"`. If that's taken, Fly will prompt you for a new name during `fly launch`; update `app` in `fly.toml` to match.
+> **Region:** the included `fly.toml` uses `ams` (Amsterdam). Change it in `fly.toml` before `fly launch` if you want somewhere closer.
 
 ### What's wired up
 
 - **Persistent SQLite** — the `small_server_data` volume mounts at `/data`, and `DB_PATH=/data/data.db` is set in `fly.toml` + the Dockerfile. Your POSTed data survives every restart/redeploy.
-- **Auto scale-to-zero** — `auto_stop_machines = true` stops the VM when idle, so it sips your free allowance. The first request after idle spins it back up in ~1–2s.
+- **Tiny image** — multi-stage build produces a ~20MB image (static Go binary on Alpine). Cold start is ~100ms — no more health-check warnings.
+- **Auto scale-to-zero** — the VM sleeps when idle, wakes in ~1s on the first request.
 - **HTTPS** — Fly auto-provisions TLS. `force_https = true` redirects HTTP → HTTPS.
-- **Configurable port** — `main.py` reads `PORT` (default `8795` locally). The container exposes `8080` per Fly convention.
 
 ### Reset the DB on Fly
 
 ```bash
-fly ssh console -C "rm /data/data.db"
+fly ssh console -a small-server --command "rm /data/data.db"
 # next request recreates it fresh
 ```
 
@@ -234,32 +237,29 @@ fly ssh console -C "rm /data/data.db"
 
 ```
 Small-Server/
-├── main.py                  # FastAPI app + SQLite logic (all endpoints)
-├── index.html               # built-in testing UI (served at /)
-├── postman_collection.json  # Postman v2.1 collection (all endpoints + tests)
-├── Dockerfile               # Fly.io / container image (uv-based)
-├── fly.toml                 # Fly.io config + persistent volume
-├── pyproject.toml           # deps (for uv)
-├── requirements.txt         # deps (for pip fallback)
-├── uv.lock                  # locked deps (for uv reproducible installs)
+├── main.go                  # the entire Go app (handlers, DB, auth, embedded UI)
+├── index.html               # built-in testing UI (embedded into the binary at build time)
+├── openapi.json             # OpenAPI 3.1 schema (embedded; served at /openapi.json)
+├── postman_collection.json  # Postman/Bruno v2.1 collection (all endpoints + tests)
+├── go.mod / go.sum          # Go module + locked deps (modernc.org/sqlite, pure Go)
+├── Dockerfile               # multi-stage Go build → tiny runtime image
+├── fly.toml                 # Fly.io config + persistent volume + health check
 ├── run.bat                  # one-click launcher (Windows)
 ├── run.sh                   # one-click launcher (macOS/Linux/Git Bash)
-├── .gitignore               # ignores venv, data.db, etc.
-├── .dockerignore            # keeps image build context lean
-├── README.md                # this file
-└── data.db                  # SQLite DB (auto-created on first run, git-ignored)
+├── .gitignore / .dockerignore / .gitattributes
+└── README.md                # this file
 ```
+
+`data.db` is auto-created on first run and git-ignored.
 
 ---
 
 ## 🛠️ Tips
 
-- **Hot reload** is on by default in the launchers (`--reload`). Edit `main.py` and the server picks up changes.
-- **Reset the DB** — just delete `data.db`; it's recreated on next start. (On Fly: see the "Reset the DB on Fly" note above.)
+- **Reset the DB** — just delete `data.db` (+ `data.db-shm`/`data.db-wal` if present); it's recreated on next start.
 - **Change the port** — set the `PORT` env var (default `8795` locally, `8080` on Fly).
-- **Point Postman at it** — import from the OpenAPI spec: `http://localhost:8795/openapi.json`.
 - **Webhook from an agent** — POST any JSON to `/public/items` (or `/secure/items` with the key) and watch it show up live in the UI at `/`.
-- **Schema migration** — if you had data from the old `{title, body}` schema, the table auto-resets to the new `payload` shape on next start (old test data is dropped).
+- **Cross-compile** — `GOOS=linux GOARCH=arm64 go build -o small-server .` builds for a Raspberry Pi from your laptop. No CGO required.
 
 ---
 

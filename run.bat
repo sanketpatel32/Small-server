@@ -1,12 +1,18 @@
 @echo off
 REM One-command launcher for Windows. Double-click or run: run.bat
-REM uv auto-installs deps from pyproject.toml; falls back to pip if uv missing.
-where uv >nul 2>&1
+REM Runs via `go run .` if Go is installed, else the prebuilt binary.
+where go >nul 2>&1
 if %errorlevel%==0 (
-    echo [small-server] starting with uv ...
-    uv run uvicorn main:app --host 0.0.0.0 --port 8795 --reload
+    echo [small-server] starting with: go run .
+    if "%PORT%"=="" set PORT=8795
+    go run .
 ) else (
-    echo [small-server] uv not found, using python ...
-    python -m pip install -q -r requirements.txt
-    python -m uvicorn main:app --host 0.0.0.0 --port 8795 --reload
+    if exist small-server.exe (
+        echo [small-server] starting prebuilt binary
+        if "%PORT%"=="" set PORT=8795
+        small-server.exe
+    ) else (
+        echo [small-server] Go not found and no small-server.exe. Install Go or build in Docker.
+        exit /b 1
+    )
 )

@@ -1,0 +1,90 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Small-Server",
+    "version": "1.0.0",
+    "description": "A tiny REST API testing server — accepts any JSON payload, SQLite-backed. Built with Go."
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "Item": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "payload": { "description": "Whatever JSON you POSTed, verbatim" },
+          "scope": { "type": "string", "enum": ["public", "secure"] },
+          "created_at": { "type": "string" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["meta"],
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": { "status": { "type": "string", "example": "ok" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/items": {
+      "get": {
+        "tags": ["public"],
+        "summary": "List all public items",
+        "responses": {
+          "200": {
+            "description": "array of items",
+            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["public"],
+        "summary": "Store ANY JSON payload (no auth)",
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "description": "Any valid JSON — object, array, string, number, boolean, or null" } } } },
+        "responses": {
+          "201": { "description": "created item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } }
+        }
+      }
+    },
+    "/secure/items": {
+      "get": {
+        "tags": ["secure"],
+        "summary": "List all secure items",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": { "description": "array of items", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } } } } },
+          "401": { "description": "missing/invalid API key" }
+        }
+      },
+      "post": {
+        "tags": ["secure"],
+        "summary": "Store ANY JSON payload",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "description": "Any valid JSON" } } } },
+        "responses": {
+          "201": { "description": "created item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+          "401": { "description": "missing/invalid API key" }
+        }
+      }
+    }
+  }
+}

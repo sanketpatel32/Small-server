@@ -1,11 +1,7 @@
 # Keep the Docker build context lean
-.venv
-__pycache__
-*.pyc
-data.db
-data.db-*
 .git
 .gitignore
+.gitattributes
 README.md
 postman_collection.json
 run.bat
@@ -13,5 +9,21 @@ run.sh
 fly.toml
 Dockerfile
 .dockerignore
+
+# Go build artifacts
+small-server
+small-server.exe
+*.exe
+
+# Local runtime data
+data.db
+data.db-*
+
+# Python leftovers (kept out if any remain)
+__pycache__
+.venv
+*.pyc
+
+# Tooling
 .claude
 .zcode
