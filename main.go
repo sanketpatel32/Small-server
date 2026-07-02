@@ -78,24 +78,57 @@ type ItemOut struct {
 
 var db *sql.DB
 
+// openDB opens the SQLite file and verifies write access by running a no-op
+// transaction. Returns an error if the DB is read-only.
+func openDB() (*sql.DB, error) {
+	conn, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, err
+	}
+	// Probe write access cheaply: CREATE TABLE IF NOT EXISTS writes to the file.
+	if _, err := conn.Exec(
+		`CREATE TABLE IF NOT EXISTS items (
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			payload    TEXT    NOT NULL,
+			scope      TEXT    NOT NULL DEFAULT 'public',
+			created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+		);`,
+	); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	return conn, nil
+}
+
 func initDB() {
 	// Make sure the parent dir exists (Fly volume starts empty, local dir is fine).
 	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o777); err != nil {
 		log.Fatalf("initDB: mkdir parent: %v", err)
 	}
 
-	// If a stale data.db exists from a previous, differently-owned deployment
-	// (e.g. the old Python image ran as root), reclaim it so SQLite can write.
-	// Errors here are non-fatal — best-effort fixup, fall through regardless.
+	// Best-effort: relax perms on an existing db file/dir left by a previous
+	// deployment that may have run as a different user (e.g. the old Python
+	// image ran as root; this one runs as uid 65532).
 	_ = os.Chmod(dir, 0o777)
 	if info, err := os.Stat(dbPath); err == nil && !info.IsDir() {
 		_ = os.Chmod(dbPath, 0o666)
 	}
 
-	conn, err := sql.Open("sqlite", dbPath)
+	conn, err := openDB()
 	if err != nil {
-		log.Fatalf("initDB: open: %v", err)
+		// Stale/foreign-owned file we can't fix by chmod → back it up & start fresh.
+		// Keeps old data accessible (renamed) while letting the server boot & write.
+		log.Printf("initDB: cannot write existing %s (%v) — backing up & recreating", dbPath, err)
+		backup := dbPath + ".stale-" + time.Now().Format("20060102-150405")
+		if renameErr := os.Rename(dbPath, backup); renameErr != nil {
+			log.Fatalf("initDB: cannot rename stale db (%v) and cannot write it (%v)", renameErr, err)
+		}
+		conn, err = openDB()
+		if err != nil {
+			log.Fatalf("initDB: fresh open failed: %v", err)
+		}
+		log.Printf("initDB: started fresh DB (old data backed up at %s)", backup)
 	}
 	db = conn
 
@@ -107,6 +140,8 @@ func initDB() {
 	}
 
 	// Migrate: if an older schema (title/body columns) exists, drop & rebuild.
+	// (openDB already ran CREATE TABLE IF NOT EXISTS with the current schema, so
+	// the table exists by now — this only fires for legacy DBs from the Python era.)
 	var cols []string
 	rows, err := db.Query(`PRAGMA table_info(items);`)
 	if err == nil {
@@ -128,20 +163,19 @@ func initDB() {
 	}
 	if len(cols) > 0 && !hasPayload {
 		if _, err := db.Exec(`DROP TABLE items;`); err != nil {
-			log.Printf("initDB: drop old: %v", err)
+			log.Printf("initDB: drop old schema: %v", err)
+		} else {
+			// Recreate with current schema after dropping the legacy one.
+			if _, err := db.Exec(`CREATE TABLE items (
+				id         INTEGER PRIMARY KEY AUTOINCREMENT,
+				payload    TEXT    NOT NULL,
+				scope      TEXT    NOT NULL DEFAULT 'public',
+				created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+			);`); err != nil {
+				log.Fatalf("initDB: recreate table: %v", err)
+			}
+			log.Println("[small-server] old schema detected — resetting items table")
 		}
-		log.Println("[small-server] old schema detected — resetting items table")
-	}
-
-	const create = `
-	CREATE TABLE IF NOT EXISTS items (
-		id         INTEGER PRIMARY KEY AUTOINCREMENT,
-		payload    TEXT    NOT NULL,                      -- raw JSON of whatever was POSTed
-		scope      TEXT    NOT NULL DEFAULT 'public',     -- 'public' | 'secure'
-		created_at TEXT    NOT NULL DEFAULT (datetime('now'))
-	);`
-	if _, err := db.Exec(create); err != nil {
-		log.Fatalf("initDB: create table: %v", err)
 	}
 }
 
