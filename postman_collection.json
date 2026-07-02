@@ -1,0 +1,267 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-small-server-0001-0000-000000000001",
+    "name": "Small-Server",
+    "description": "A tiny REST API testing server (FastAPI + SQLite).\n\nAccepts ANY JSON payload on POST — objects, arrays, strings, numbers, booleans, even null. Stored verbatim in SQLite.\n\nAll values are HARDCODED. Start the server, import this file, hit Send — no environment, no variables, no setup.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Meta",
+      "description": "Health check, docs, and schema introspection.",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('status = ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8795",
+              "path": ["health"]
+            },
+            "description": "Liveness probe. Returns `{\"status\":\"ok\"}`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": \"ok\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Swagger Docs (HTML)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/docs",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8795",
+              "path": ["docs"]
+            },
+            "description": "Interactive Swagger UI — open in a browser."
+          }
+        },
+        {
+          "name": "OpenAPI Schema",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/openapi.json",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8795",
+              "path": ["openapi.json"]
+            },
+            "description": "Raw OpenAPI 3.x schema."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "description": "Unauthenticated endpoints. Accept and return any JSON payload. No auth header needed.",
+      "item": [
+        {
+          "name": "List public items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": { "disableBodyPruning": true },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/public/items",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8795",
+              "path": ["public", "items"]
+            },
+            "description": "Return all public items, newest first."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "[\n  {\n    \"id\": 1,\n    \"payload\": { \"event\": \"user.signup\", \"tags\": [\"new\"] },\n    \"scope\": \"public\",\n    \"created_at\": \"2026-06-30 01:22:01\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create public item (any JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('echoes payload', () => {",
+                  "    const sent = JSON.parse(pm.request.body.raw);",
+                  "    pm.expect(pm.response.json().payload).to.eql(sent);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"user.signup\",\n  \"user\": {\n    \"id\": 42,\n    \"email\": \"a@b.com\"\n  },\n  \"tags\": [\"new\", \"trial\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:8795/public/items",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8795",
+              "path": ["public", "items"]
+            },
+            "description": "Store ANY valid JSON payload — objects, arrays, nested structs, strings, numbers, booleans, or null. Stored verbatim and echoed back. No auth required."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 1,\n  \"payload\": {\n    \"event\": \"user.signup\",\n    \"user\": { \"id\": 42, \"email\": \"a@b.com\" },\n    \"tags\": [\"new\", \"trial\"]\n  },\n  \"scope\": \"public\",\n  \"created_at\": \"2026-06-30 01:22:01\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Secure",
+      "description": "API-key-protected endpoints. Each request has the X-API-Key: secret-key-123 header hardcoded.",
+      "item": [
+        {
+          "name": "List secure items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": { "disableBodyPruning": true },
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "secret-key-123" }
+            ],
+            "url": {
+              "raw": "http://localhost:8795/secure/items",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8795",
+              "path": ["secure", "items"]
+            },
+            "description": "Return all secure items. Requires header X-API-Key: secret-key-123 (hardcoded on this request)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "[\n  {\n    \"id\": 2,\n    \"payload\": { \"secret\": \"data\", \"ts\": 1690000000 },\n    \"scope\": \"secure\",\n    \"created_at\": \"2026-06-30 01:22:01\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Create secure item (any JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('scope = secure', () => pm.expect(pm.response.json().scope).to.eql('secure'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "secret-key-123" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"secret\": \"data\",\n  \"ts\": 1690000000,\n  \"nested\": { \"ok\": true }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:8795/secure/items",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8795",
+              "path": ["secure", "items"]
+            },
+            "description": "Store ANY valid JSON payload under the secure scope. Requires header X-API-Key: secret-key-123 (hardcoded on this request)."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"id\": 2,\n  \"payload\": { \"secret\": \"data\", \"ts\": 1690000000, \"nested\": { \"ok\": true } },\n  \"scope\": \"secure\",\n  \"created_at\": \"2026-06-30 01:22:01\"\n}"
+            },
+            {
+              "name": "401 Unauthorized (missing key)",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"detail\": \"Invalid or missing API key. Send header 'X-API-Key'.\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

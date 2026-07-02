@@ -1,0 +1,12 @@
+# Normalize line endings — text files use LF in the repo regardless of OS.
+* text=auto eol=lf
+
+# Force LF for these (Dockerfiles must not get CRLF)
+*.sh     text eol=lf
+*.bat    text eol=crlf
+Dockerfile text eol=lf
+fly.toml text eol=lf
+
+# Binary
+*.db     binary
+*.sqlite binary

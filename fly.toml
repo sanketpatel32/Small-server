@@ -1,0 +1,33 @@
+# Fly.io config for Small-Server
+# Docs: https://fly.io/docs/reference/configuration/
+app = "small-server"
+primary_region = "bom"   # Mumbai — change to your nearest region (e.g. iad, sea, lhr)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  DB_PATH = "/data/data.db"
+  PORT    = "8080"
+
+# Persistent volume so SQLite (data.db) survives restarts & deploys.
+# Create it once with:  fly volumes create small_server_data --size 1
+[mount]
+  source     = "small_server_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https   = true
+  auto_stop_machines = true      # scale to zero when idle (saves free allowance)
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type            = "requests"
+    soft_limit      = 250
+    hard_limit      = 500
+
+[[vm]]
+  size = "shared-cpu-1x"         # fits in the free allowance
+  memory = "512mb"

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Small-Server · Test Console</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1e2230;
+    --border: #2a2f3a;
+    --text: #e6e9ef;
+    --muted: #8b93a7;
+    --accent: #7c5cff;
+    --accent-2: #4cd7a0;
+    --danger: #ff6b6b;
+    --warn: #ffb454;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; }
+  h1 .dot { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .links a { color: var(--accent-2); font-size: 13px; text-decoration: none; margin-left: 14px; }
+  .links a:hover { text-decoration: underline; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .card h2 {
+    margin: 0 0 6px; font-size: 15px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hint { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+
+  .badge {
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
+  }
+  .badge.public  { background: rgba(76, 215, 160, .15); color: var(--accent-2); }
+  .badge.secure  { background: rgba(124, 92, 255, .15); color: var(--accent); }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 9px 11px; font-size: 13px;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 140px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 14px; }
+  button {
+    flex: 1;
+    background: var(--accent); color: white; border: none;
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity .15s;
+  }
+  button:hover { opacity: .88; }
+  button.secure-btn { background: var(--accent-2); color: #0f1115; }
+  button.ghost {
+    flex: 0 0 auto; background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--border); padding: 10px 12px;
+  }
+  button.ghost:hover { color: var(--text); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+
+  .list-wrap { grid-column: 1 / -1; margin-top: 4px; }
+  .list-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; flex-wrap: wrap; gap: 10px;
+  }
+  .filter-bar { display: flex; gap: 8px; }
+  .filter-bar button {
+    flex: 0 0 auto; padding: 6px 12px; font-size: 12px; font-weight: 500;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+  }
+  .filter-bar button.active { border-color: var(--accent); color: var(--accent); }
+
+  .items { display: flex; flex-direction: column; gap: 10px; }
+  .item {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .item-id { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .item-payload {
+    font-size: 12.5px; color: var(--text); white-space: pre-wrap;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    background: rgba(0,0,0,.25); border-radius: 6px; padding: 10px 12px;
+    overflow-x: auto;
+    max-height: 320px; overflow-y: auto;
+  }
+  .item-date { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-2); border: 1px solid var(--border);
+    padding: 10px 18px; border-radius: 8px; font-size: 13px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+  .toast.ok { border-color: var(--accent-2); color: var(--accent-2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Small<span class="dot">·</span>Server <span style="font-size:12px;color:var(--muted);font-weight:400">test console</span></h1>
+    <div class="sub">Tiny SQLite-backed REST API — accepts ANY JSON on POST · public + secured endpoints on :8795</div>
+  </div>
+  <div class="links">
+    <a href="/docs" target="_blank">Swagger Docs</a>
+    <a href="/health" target="_blank">Health</a>
+  </div>
+</header>
+
+<div class="grid">
+  <!-- Public create -->
+  <div class="card">
+    <h2>Send Payload <span class="badge public">public</span></h2>
+    <div class="hint">Paste any valid JSON. Objects, arrays, nested — whatever your webhook sends.</div>
+    <input id="p-raw" placeholder="or type a plain string here" />
+    <label for="p-json">JSON payload</label>
+    <textarea id="p-json" placeholder='{
+  "event": "user.signup",
+  "user": { "id": 42, "email": "a@b.com" },
+  "tags": ["new", "trial"]
+}'></textarea>
+    <div class="btn-row">
+      <button onclick="createPublic()">POST /public/items</button>
+      <button class="ghost" onclick="fillSample('p-json')">sample</button>
+    </div>
+  </div>
+
+  <!-- Secure create -->
+  <div class="card">
+    <h2>Send Payload <span class="badge secure">secure</span></h2>
+    <div class="hint">Stored under a protected scope — requires your API key.</div>
+    <label for="api-key">API Key</label>
+    <input id="api-key" placeholder="secret-key-123" value="secret-key-123" />
+    <input id="s-raw" placeholder="or type a plain string here" />
+    <label for="s-json">JSON payload</label>
+    <textarea id="s-json" placeholder='{
+  "secret": "data",
+  "numbers": [1, 2, 3]
+}'></textarea>
+    <div class="btn-row">
+      <button class="secure-btn" onclick="createSecure()">POST /secure/items</button>
+      <button class="ghost" onclick="fillSample('s-json')">sample</button>
+    </div>
+  </div>
+
+  <!-- Items list -->
+  <div class="card list-wrap">
+    <div class="list-header">
+      <h2 style="margin:0">Stored Items</h2>
+      <div class="filter-bar">
+        <button class="active" data-scope="all" onclick="setFilter('all')">All</button>
+        <button data-scope="public" onclick="setFilter('public')">Public</button>
+        <button data-scope="secure" onclick="setFilter('secure')">Secure</button>
+        <button onclick="refresh()">↻ Refresh</button>
+        <button onclick="clearAll()" style="border-color:var(--danger);color:var(--danger)">Clear</button>
+      </div>
+    </div>
+    <div id="items" class="items"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const API_KEY_INPUT = () => document.getElementById('api-key').value.trim();
+let currentFilter = 'all';
+
+function toast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function setFilter(scope) {
+  currentFilter = scope;
+  document.querySelectorAll('.filter-bar button[data-scope]').forEach(b => {
+    b.classList.toggle('active', b.dataset.scope === scope);
+  });
+  refresh();
+}
+
+function fillSample(id) {
+  document.getElementById(id).value = JSON.stringify({
+    event: "demo.payload",
+    timestamp: Date.now(),
+    nested: { ok: true, list: [1, 2, 3] },
+    note: "edited from the UI"
+  }, null, 2);
+}
+
+function buildPayload(jsonId, rawId) {
+  const raw = document.getElementById(rawId).value.trim();
+  const json = document.getElementById(jsonId).value.trim();
+  if (raw && json) return { _error: "Use only one input — either the plain string OR the JSON box, not both." };
+  if (raw) return raw;                       // store as a plain JSON string
+  if (!json) return { _error: "Provide a payload (plain string or JSON)." };
+  try {
+    return JSON.parse(json);                 // store parsed JSON
+  } catch (e) {
+    return { _error: "Invalid JSON: " + e.message };
+  }
+}
+
+async function api(method, url, { headers = {}, body } = {}) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data;
+  try { data = await res.json(); } catch { data = null; }
+  if (!res.ok) throw new Error(data?.detail || `HTTP ${res.status}`);
+  return data;
+}
+
+async function createPublic() {
+  const payload = buildPayload('p-json', 'p-raw');
+  if (payload._error) return toast(payload._error, 'error');
+  try {
+    await api('POST', '/public/items', { body: payload });
+    document.getElementById('p-json').value = '';
+    document.getElementById('p-raw').value = '';
+    toast('Stored ✓', 'ok');
+    refresh();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function createSecure() {
+  const key = API_KEY_INPUT();
+  const payload = buildPayload('s-json', 's-raw');
+  if (!key) return toast('API key is required', 'error');
+  if (payload._error) return toast(payload._error, 'error');
+  try {
+    await api('POST', '/secure/items', {
+      headers: { 'X-API-Key': key },
+      body: payload,
+    });
+    document.getElementById('s-json').value = '';
+    document.getElementById('s-raw').value = '';
+    toast('Stored ✓', 'ok');
+    refresh();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function renderPayload(p) {
+  // Pretty-print any stored payload (object, array, string, number, bool, null)
+  if (p === null) return 'null';
+  if (typeof p === 'object') {
+    try { return JSON.stringify(p, null, 2); } catch { return String(p); }
+  }
+  return String(p);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+async function refresh() {
+  const container = document.getElementById('items');
+  const scopes = currentFilter === 'all' ? ['public', 'secure'] : [currentFilter];
+
+  let all = [];
+  for (const scope of scopes) {
+    try {
+      const opts = scope === 'secure' ? { headers: { 'X-API-Key': API_KEY_INPUT() } } : {};
+      const rows = await api('GET', `/${scope}/items`, opts);
+      all.push(...rows);
+    } catch (e) {
+      // secure may 401 without key — silently skip
+    }
+  }
+
+  all.sort((a, b) => b.id - a.id);
+
+  if (!all.length) {
+    container.innerHTML = '<div class="empty">No items yet. Send a payload above. ☝️</div>';
+    return;
+  }
+
+  container.innerHTML = all.map(it => `
+    <div class="item">
+      <div class="item-head">
+        <span class="badge ${it.scope}">${it.scope}</span>
+        <span class="item-id">#${it.id}</span>
+      </div>
+      <div class="item-payload">${escapeHtml(renderPayload(it.payload))}</div>
+      <div class="item-date">${it.created_at}</div>
+    </div>
+  `).join('');
+}
+
+async function clearAll() {
+  // No DELETE endpoint by design — this is a client-side view clearer only.
+  document.getElementById('items').innerHTML = '<div class="empty">Cleared from view. DB unchanged — delete data.db to reset fully.</div>';
+  toast('View cleared (DB untouched)', 'warn');
+}
+
+refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Keep the Docker build context lean
+.venv
+__pycache__
+*.pyc
+data.db
+data.db-*
+.git
+.gitignore
+README.md
+postman_collection.json
+run.bat
+run.sh
+fly.toml
+Dockerfile
+.dockerignore
+.claude
+.zcode
