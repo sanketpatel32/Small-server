@@ -80,8 +80,17 @@ var db *sql.DB
 
 func initDB() {
 	// Make sure the parent dir exists (Fly volume starts empty, local dir is fine).
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+	dir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		log.Fatalf("initDB: mkdir parent: %v", err)
+	}
+
+	// If a stale data.db exists from a previous, differently-owned deployment
+	// (e.g. the old Python image ran as root), reclaim it so SQLite can write.
+	// Errors here are non-fatal — best-effort fixup, fall through regardless.
+	_ = os.Chmod(dir, 0o777)
+	if info, err := os.Stat(dbPath); err == nil && !info.IsDir() {
+		_ = os.Chmod(dbPath, 0o666)
 	}
 
 	conn, err := sql.Open("sqlite", dbPath)
@@ -90,9 +99,11 @@ func initDB() {
 	}
 	db = conn
 
-	// SQLite handles concurrent reads + serialized writes fine for this workload.
+	// WAL mode is an optimization (better concurrent reads). It needs write
+	// access; if it fails the DB is still usable in default rollback-journal
+	// mode, so warn instead of fataling.
 	if _, err := db.Exec(`PRAGMA journal_mode = WAL;`); err != nil {
-		log.Fatalf("initDB: pragma: %v", err)
+		log.Printf("initDB: WAL mode unavailable (%v) — using default journal mode", err)
 	}
 
 	// Migrate: if an older schema (title/body columns) exists, drop & rebuild.
