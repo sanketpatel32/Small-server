@@ -1,7 +1,7 @@
 # Fly.io config for Small-Server
 # Docs: https://fly.io/docs/reference/configuration/
 app = "small-server"
-primary_region = "bom"   # Mumbai — change to your nearest region (e.g. iad, sea, lhr)
+primary_region = "ams"   # Amsterdam — change to your nearest region (e.g. iad, sea, lhr)
 
 [build]
   dockerfile = "Dockerfile"
