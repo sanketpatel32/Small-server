@@ -30,9 +30,13 @@
             "url": {
               "raw": "http://localhost:8795/health",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8795",
-              "path": ["health"]
+              "path": [
+                "health"
+              ]
             },
             "description": "Liveness probe. Returns `{\"status\":\"ok\"}`."
           },
@@ -41,7 +45,12 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"status\": \"ok\"\n}"
             }
           ]
@@ -54,9 +63,13 @@
             "url": {
               "raw": "http://localhost:8795/docs",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8795",
-              "path": ["docs"]
+              "path": [
+                "docs"
+              ]
             },
             "description": "Interactive Swagger UI — open in a browser."
           }
@@ -69,9 +82,13 @@
             "url": {
               "raw": "http://localhost:8795/openapi.json",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8795",
-              "path": ["openapi.json"]
+              "path": [
+                "openapi.json"
+              ]
             },
             "description": "Raw OpenAPI 3.x schema."
           }
@@ -96,16 +113,23 @@
               }
             }
           ],
-          "protocolProfileBehavior": { "disableBodyPruning": true },
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
           "request": {
             "method": "GET",
             "header": [],
             "url": {
               "raw": "http://localhost:8795/public/items",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8795",
-              "path": ["public", "items"]
+              "path": [
+                "public",
+                "items"
+              ]
             },
             "description": "Return all public items, newest first."
           },
@@ -114,7 +138,12 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "[\n  {\n    \"id\": 1,\n    \"payload\": { \"event\": \"user.signup\", \"tags\": [\"new\"] },\n    \"scope\": \"public\",\n    \"created_at\": \"2026-06-30 01:22:01\"\n  }\n]"
             }
           ]
@@ -139,19 +168,31 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"event\": \"user.signup\",\n  \"user\": {\n    \"id\": 42,\n    \"email\": \"a@b.com\"\n  },\n  \"tags\": [\"new\", \"trial\"]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "http://localhost:8795/public/items",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8795",
-              "path": ["public", "items"]
+              "path": [
+                "public",
+                "items"
+              ]
             },
             "description": "Store ANY valid JSON payload — objects, arrays, nested structs, strings, numbers, booleans, or null. Stored verbatim and echoed back. No auth required."
           },
@@ -160,8 +201,215 @@
               "name": "201 Created",
               "status": "Created",
               "code": 201,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"id\": 1,\n  \"payload\": {\n    \"event\": \"user.signup\",\n    \"user\": { \"id\": 42, \"email\": \"a@b.com\" },\n    \"tags\": [\"new\", \"trial\"]\n  },\n  \"scope\": \"public\",\n  \"created_at\": \"2026-06-30 01:22:01\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Read one public item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": null,
+            "url": {
+              "raw": "http://localhost:8795/public/items/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "public",
+                "items",
+                "1"
+              ]
+            },
+            "description": "Get a single public item by id. Returns 404 if not found."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": 1,\n  \"payload\": { \"event\": \"user.signup\" },\n  \"scope\": \"public\",\n  \"created_at\": \"2026-07-02 12:00:00\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update public item (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+                  "if (pm.response.code === 200) { pm.test('payload updated', () => pm.expect(pm.response.json().payload.event).to.eql('user.updated')); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"user.updated\",\n  \"updated\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8795/public/items/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "public",
+                "items",
+                "1"
+              ]
+            },
+            "description": "Replace a public item's payload with any new JSON. Returns the updated item, or 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete public item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+                  "if (pm.response.code === 200) { pm.test('deleted shape', () => pm.expect(pm.response.json().status).to.eql('deleted')); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": null,
+            "url": {
+              "raw": "http://localhost:8795/public/items/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "public",
+                "items",
+                "1"
+              ]
+            },
+            "description": "Delete a single public item by id. Returns {status:deleted, id} or 404."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"deleted\",\n  \"id\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Clear all public items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('cleared shape', () => pm.expect(pm.response.json().status).to.eql('cleared'));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": null,
+            "url": {
+              "raw": "http://localhost:8795/public/items",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "public",
+                "items"
+              ]
+            },
+            "description": "Delete every public item. Returns {status:cleared, scope, removed:N}."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": \"cleared\",\n  \"scope\": \"public\",\n  \"removed\": 3\n}"
             }
           ]
         }
@@ -185,18 +433,28 @@
               }
             }
           ],
-          "protocolProfileBehavior": { "disableBodyPruning": true },
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
           "request": {
             "method": "GET",
             "header": [
-              { "key": "X-API-Key", "value": "secret-key-123" }
+              {
+                "key": "X-API-Key",
+                "value": "secret-key-123"
+              }
             ],
             "url": {
               "raw": "http://localhost:8795/secure/items",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8795",
-              "path": ["secure", "items"]
+              "path": [
+                "secure",
+                "items"
+              ]
             },
             "description": "Return all secure items. Requires header X-API-Key: secret-key-123 (hardcoded on this request)."
           },
@@ -205,7 +463,12 @@
               "name": "200 OK",
               "status": "OK",
               "code": 200,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "[\n  {\n    \"id\": 2,\n    \"payload\": { \"secret\": \"data\", \"ts\": 1690000000 },\n    \"scope\": \"secure\",\n    \"created_at\": \"2026-06-30 01:22:01\"\n  }\n]"
             }
           ]
@@ -227,20 +490,35 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "secret-key-123" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "secret-key-123"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"secret\": \"data\",\n  \"ts\": 1690000000,\n  \"nested\": { \"ok\": true }\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "http://localhost:8795/secure/items",
               "protocol": "http",
-              "host": ["localhost"],
+              "host": [
+                "localhost"
+              ],
               "port": "8795",
-              "path": ["secure", "items"]
+              "path": [
+                "secure",
+                "items"
+              ]
             },
             "description": "Store ANY valid JSON payload under the secure scope. Requires header X-API-Key: secret-key-123 (hardcoded on this request)."
           },
@@ -249,17 +527,207 @@
               "name": "201 Created",
               "status": "Created",
               "code": 201,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"id\": 2,\n  \"payload\": { \"secret\": \"data\", \"ts\": 1690000000, \"nested\": { \"ok\": true } },\n  \"scope\": \"secure\",\n  \"created_at\": \"2026-06-30 01:22:01\"\n}"
             },
             {
               "name": "401 Unauthorized (missing key)",
               "status": "Unauthorized",
               "code": 401,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "body": "{\n  \"detail\": \"Invalid or missing API key. Send header 'X-API-Key'.\"\n}"
             }
           ]
+        },
+        {
+          "name": "Read one secure item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200, 404, 401]));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "secret-key-123"
+              }
+            ],
+            "body": null,
+            "url": {
+              "raw": "http://localhost:8795/secure/items/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "items",
+                "1"
+              ]
+            },
+            "description": "Get a single secure item by id. Requires X-API-Key."
+          },
+          "response": []
+        },
+        {
+          "name": "Update secure item (PUT)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200, 404, 401]));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-API-Key",
+                "value": "secret-key-123"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"secret\": \"updated\",\n  \"ts\": 1690000001\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8795/secure/items/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "items",
+                "1"
+              ]
+            },
+            "description": "Replace a secure item's payload. Requires X-API-Key."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete secure item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200, 404, 401]));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "secret-key-123"
+              }
+            ],
+            "body": null,
+            "url": {
+              "raw": "http://localhost:8795/secure/items/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "items",
+                "1"
+              ]
+            },
+            "description": "Delete a single secure item by id. Requires X-API-Key."
+          },
+          "response": []
+        },
+        {
+          "name": "Clear all secure items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status', () => pm.expect(pm.response.code).to.be.oneOf([200, 401]));",
+                  "if (pm.response.code === 200) { pm.test('cleared shape', () => pm.expect(pm.response.json().status).to.eql('cleared')); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "secret-key-123"
+              }
+            ],
+            "body": null,
+            "url": {
+              "raw": "http://localhost:8795/secure/items",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "items"
+              ]
+            },
+            "description": "Delete every secure item. Requires X-API-Key."
+          },
+          "response": []
         }
       ]
     }

@@ -5,9 +5,11 @@ A tiny, ultra-light REST API testing server. Built with **Go** (stdlib net/http)
 - ⚡ **Single static binary** — ~15MB, no runtime, no dependencies to install
 - 🐧 **Cross-platform** — builds for Linux/macOS/Windows from one codebase
 - 🗃️ **SQLite** file DB (no separate server, zero config)
+- 📦 **Full CRUD** — create, read (list + one), update, delete (one + clear-all)
 - 📦 **Accepts ANY JSON payload** — objects, arrays, nested structs, strings, numbers, booleans, even `null`
-- 🔐 **4 endpoints** — public + API-key-secured, each with GET & POST
+- 🔐 **Public + API-key-secured routes** — same CRUD on both, scope-isolated
 - 🌐 **Built-in UI** — test everything at `http://localhost:8795/`
+- 🌍 **CORS open** — call it from any browser app (React/Vue/etc.)
 - 🔌 **Uncommon port 8795** — won't clash with your other dev servers
 
 ---
@@ -80,17 +82,31 @@ Base URL: `http://localhost:8795`
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `GET`  | `/health` | — | Health check → `{"status":"ok"}` |
-| `GET`  | `/public/items` | none | List public items |
-| `POST` | `/public/items` | none | Store **any** JSON payload |
-| `GET`  | `/secure/items` | `X-API-Key` | List secure items |
-| `POST` | `/secure/items` | `X-API-Key` | Store **any** JSON payload |
-| `GET`  | `/` | — | Built-in testing UI |
-| `GET`  | `/openapi.json` | — | OpenAPI 3.1 schema (for importers) |
+| `GET`    | `/health` | — | Health check → `{"status":"ok"}` |
+| **Public** | | | |
+| `GET`    | `/public/items` | none | **List** all public items |
+| `POST`   | `/public/items` | none | **Create** — store any JSON payload |
+| `GET`    | `/public/items/{id}` | none | **Read** one public item |
+| `PUT`    | `/public/items/{id}` | none | **Update** — replace a public item's payload |
+| `DELETE` | `/public/items/{id}` | none | **Delete** one public item |
+| `DELETE` | `/public/items` | none | **Clear all** public items |
+| **Secure** | | | |
+| `GET`    | `/secure/items` | `X-API-Key` | **List** all secure items |
+| `POST`   | `/secure/items` | `X-API-Key` | **Create** — store any JSON payload |
+| `GET`    | `/secure/items/{id}` | `X-API-Key` | **Read** one secure item |
+| `PUT`    | `/secure/items/{id}` | `X-API-Key` | **Update** — replace a secure item's payload |
+| `DELETE` | `/secure/items/{id}` | `X-API-Key` | **Delete** one secure item |
+| `DELETE` | `/secure/items` | `X-API-Key` | **Clear all** secure items |
+| **Helpers** | | | |
+| `GET`    | `/` | — | Built-in testing UI |
+| `GET`    | `/openapi.json` | — | OpenAPI 3.1 schema (for importers) |
 
-### Request body (POST endpoints) — accepts ANYTHING
+> 🔒 Secure routes require header `X-API-Key: secret-key-123` (override via `API_KEY` env var).
+> 🔁 **Scope isolation:** an `id` only resolves within its own scope — `/public/items/5` won't return a secure item even if id 5 exists there.
 
-The body can be **any valid JSON**. Whatever you POST is stored verbatim and echoed back unchanged. Examples:
+### Request body (POST/PUT endpoints) — accepts ANYTHING
+
+The body can be **any valid JSON**. Whatever you send is stored verbatim and echoed back unchanged. Examples:
 
 ```json
 // a nested object
@@ -123,13 +139,16 @@ Every stored item looks like this — `payload` is exactly what you sent:
 }
 ```
 
-GET endpoints return an array of these (empty DB → `[]`, not `null`).
+`GET /.../items` returns an array of these (empty → `[]`, not `null`).
+`GET /.../items/{id}` returns one, or `404 {"detail":"Item not found."}` if missing.
+`DELETE /.../items/{id}` returns `{"status":"deleted","id":N}`.
+`DELETE /.../items` (clear all) returns `{"status":"cleared","scope":"...","removed":N}`.
 
 ---
 
 ## 🧪 Example calls
 
-### Public POST — nested object (no auth)
+### Create — public POST (no auth)
 
 ```bash
 curl -X POST http://localhost:8795/public/items \
@@ -137,15 +156,35 @@ curl -X POST http://localhost:8795/public/items \
   -d '{"event":"user.signup","user":{"id":42,"email":"a@b.com"},"tags":["new","trial"]}'
 ```
 
-### Public POST — plain string
+### Read one — by id
 
 ```bash
-curl -X POST http://localhost:8795/public/items \
-  -H "Content-Type: application/json" \
-  -d '"hello world"'
+curl http://localhost:8795/public/items/1
 ```
 
-### Secure POST — with API key
+### Update — PUT replaces the payload
+
+```bash
+curl -X PUT http://localhost:8795/public/items/1 \
+  -H "Content-Type: application/json" \
+  -d '{"event":"user.updated","user":{"id":42,"email":"new@b.com"}}'
+```
+
+### Delete one — by id
+
+```bash
+curl -X DELETE http://localhost:8795/public/items/1
+# -> {"status":"deleted","id":1}
+```
+
+### Clear all — delete every public item
+
+```bash
+curl -X DELETE http://localhost:8795/public/items
+# -> {"status":"cleared","scope":"public","removed":3}
+```
+
+### Secure — with API key
 
 ```bash
 curl -X POST http://localhost:8795/secure/items \

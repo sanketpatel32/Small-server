@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Small-Server",
-    "version": "1.0.0",
-    "description": "A tiny REST API testing server — accepts any JSON payload, SQLite-backed. Built with Go."
+    "version": "1.1.0",
+    "description": "A tiny REST API testing server — full CRUD on any JSON payload, SQLite-backed. Built with Go."
   },
   "components": {
     "securitySchemes": {
@@ -18,10 +18,29 @@
         "type": "object",
         "properties": {
           "id": { "type": "integer" },
-          "payload": { "description": "Whatever JSON you POSTed, verbatim" },
+          "payload": { "description": "Whatever JSON you sent, stored verbatim" },
           "scope": { "type": "string", "enum": ["public", "secure"] },
           "created_at": { "type": "string" }
         }
+      },
+      "Cleared": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "cleared" },
+          "scope": { "type": "string" },
+          "removed": { "type": "integer", "description": "count of items deleted" }
+        }
+      },
+      "Deleted": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "deleted" },
+          "id": { "type": "integer" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": { "detail": { "type": "string" } }
       }
     }
   },
@@ -58,10 +77,45 @@
       },
       "post": {
         "tags": ["public"],
-        "summary": "Store ANY JSON payload (no auth)",
+        "summary": "Create — store ANY JSON payload (no auth)",
         "requestBody": { "required": false, "content": { "application/json": { "schema": { "description": "Any valid JSON — object, array, string, number, boolean, or null" } } } },
         "responses": {
           "201": { "description": "created item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["public"],
+        "summary": "Clear all — delete every public item",
+        "responses": {
+          "200": { "description": "cleared", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Cleared" } } } }
+        }
+      }
+    },
+    "/public/items/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": {
+        "tags": ["public"],
+        "summary": "Read one public item by id",
+        "responses": {
+          "200": { "description": "item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "put": {
+        "tags": ["public"],
+        "summary": "Update — replace the payload of a public item",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "description": "Any valid JSON — replaces the existing payload" } } } },
+        "responses": {
+          "200": { "description": "updated item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      },
+      "delete": {
+        "tags": ["public"],
+        "summary": "Delete one public item by id",
+        "responses": {
+          "200": { "description": "deleted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Deleted" } } } },
+          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -77,11 +131,54 @@
       },
       "post": {
         "tags": ["secure"],
-        "summary": "Store ANY JSON payload",
+        "summary": "Create — store ANY JSON payload",
         "security": [{ "ApiKeyAuth": [] }],
         "requestBody": { "required": false, "content": { "application/json": { "schema": { "description": "Any valid JSON" } } } },
         "responses": {
           "201": { "description": "created item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+          "401": { "description": "missing/invalid API key" }
+        }
+      },
+      "delete": {
+        "tags": ["secure"],
+        "summary": "Clear all — delete every secure item",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": { "description": "cleared", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Cleared" } } } },
+          "401": { "description": "missing/invalid API key" }
+        }
+      }
+    },
+    "/secure/items/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": {
+        "tags": ["secure"],
+        "summary": "Read one secure item by id",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": { "description": "item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "missing/invalid API key" }
+        }
+      },
+      "put": {
+        "tags": ["secure"],
+        "summary": "Update — replace the payload of a secure item",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "description": "Any valid JSON — replaces the existing payload" } } } },
+        "responses": {
+          "200": { "description": "updated item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "missing/invalid API key" }
+        }
+      },
+      "delete": {
+        "tags": ["secure"],
+        "summary": "Delete one secure item by id",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": { "description": "deleted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Deleted" } } } },
+          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "401": { "description": "missing/invalid API key" }
         }
       }

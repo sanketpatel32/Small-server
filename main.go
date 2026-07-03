@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -251,15 +252,64 @@ func createItem(payload []byte, scope string) (ItemOut, error) {
 	if err != nil {
 		return ItemOut{}, err
 	}
+	item, _, err := getItem(id)
+	return item, err
+}
+
+// getItem fetches a single item by id. Returns (zero, false) if not found.
+func getItem(id int64) (ItemOut, bool, error) {
 	var p []byte
 	var sc, ca string
-	err = db.QueryRow(
+	err := db.QueryRow(
 		`SELECT payload, scope, created_at FROM items WHERE id = ?;`, id,
 	).Scan(&p, &sc, &ca)
-	if err != nil {
-		return ItemOut{}, err
+	if err == sql.ErrNoRows {
+		return ItemOut{}, false, nil
 	}
-	return rowToItem(id, p, sc, ca), nil
+	if err != nil {
+		return ItemOut{}, false, err
+	}
+	return rowToItem(id, p, sc, ca), true, nil
+}
+
+// updateItem replaces the payload of an existing item by id.
+// Returns (updated, found, err); found=false when no row matched.
+func updateItem(id int64, payload []byte) (ItemOut, bool, error) {
+	res, err := db.Exec(`UPDATE items SET payload = ? WHERE id = ?;`, string(payload), id)
+	if err != nil {
+		return ItemOut{}, false, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return ItemOut{}, false, err
+	}
+	if n == 0 {
+		return ItemOut{}, false, nil
+	}
+	item, found, err := getItem(id)
+	return item, found, err
+}
+
+// deleteItem removes a single item by id. Returns found=false if no row matched.
+func deleteItem(id int64) (bool, error) {
+	res, err := db.Exec(`DELETE FROM items WHERE id = ?;`, id)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
+// clearItems deletes all items in the given scope. Returns the count removed.
+func clearItems(scope string) (int64, error) {
+	res, err := db.Exec(`DELETE FROM items WHERE scope = ?;`, scope)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -379,32 +429,14 @@ func routes() http.Handler {
 	mux.HandleFunc("/docs", handleUI) // no auto-Swagger in Go; alias to the UI
 	mux.HandleFunc("/", handleUI)
 
-	mux.HandleFunc("/public/items", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			listItemHandler("public")(w, r)
-		case http.MethodPost:
-			createItemHandler("public")(w, r)
-		default:
-			w.Header().Set("Allow", "GET, POST")
-			writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		}
-	})
+	// /public/items          GET    list   | POST   create
+	// /public/items/{id}     GET    read   | PUT    update | DELETE remove
+	mux.HandleFunc("/public/items", scopeCollectionHandler("public", false))
+	mux.HandleFunc("/public/items/{id}", scopeItemHandler("public", false))
 
-	mux.HandleFunc("/secure/items", func(w http.ResponseWriter, r *http.Request) {
-		if !requireAPIKey(w, r) {
-			return
-		}
-		switch r.Method {
-		case http.MethodGet:
-			listItemHandler("secure")(w, r)
-		case http.MethodPost:
-			createItemHandler("secure")(w, r)
-		default:
-			w.Header().Set("Allow", "GET, POST")
-			writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		}
-	})
+	// /secure/items          same shape, requires X-API-Key
+	mux.HandleFunc("/secure/items", scopeCollectionHandler("secure", true))
+	mux.HandleFunc("/secure/items/{id}", scopeItemHandler("secure", true))
 
 	// Tiny logging middleware.
 	logging := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -416,6 +448,102 @@ func routes() http.Handler {
 
 	// CORS middleware (outermost): lets browsers call this API from any origin.
 	return corsMiddleware(logging)
+}
+
+// scopeCollectionHandler handles the collection endpoints: GET (list), POST
+// (create), DELETE (clear all in scope).
+func scopeCollectionHandler(scope string, secure bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if secure && !requireAPIKey(w, r) {
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			listItemHandler(scope)(w, r)
+		case http.MethodPost:
+			createItemHandler(scope)(w, r)
+		case http.MethodDelete:
+			n, err := clearItems(scope)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "db error: "+err.Error())
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{
+				"status":  "cleared",
+				"scope":   scope,
+				"removed": n,
+			})
+		default:
+			w.Header().Set("Allow", "GET, POST, DELETE")
+			writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		}
+	}
+}
+
+// scopeItemHandler handles single-item endpoints: GET (read), PUT (update),
+// DELETE (remove).
+func scopeItemHandler(scope string, secure bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if secure && !requireAPIKey(w, r) {
+			return
+		}
+		id, err := parseID(r)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "Invalid item id in URL.")
+			return
+		}
+		switch r.Method {
+		case http.MethodGet:
+			item, found, err := getItem(id)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "db error: "+err.Error())
+				return
+			}
+			if !found {
+				writeError(w, http.StatusNotFound, "Item not found.")
+				return
+			}
+			writeJSON(w, http.StatusOK, item)
+		case http.MethodPut:
+			body, _ := readBody(r)
+			if err := validateJSON(body); err != nil {
+				writeError(w, http.StatusBadRequest, "There was an error parsing the body")
+				return
+			}
+			item, found, err := updateItem(id, body)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "db error: "+err.Error())
+				return
+			}
+			if !found {
+				writeError(w, http.StatusNotFound, "Item not found.")
+				return
+			}
+			writeJSON(w, http.StatusOK, item)
+		case http.MethodDelete:
+			found, err := deleteItem(id)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "db error: "+err.Error())
+				return
+			}
+			if !found {
+				writeError(w, http.StatusNotFound, "Item not found.")
+				return
+			}
+			writeJSON(w, http.StatusOK, map[string]any{
+				"status": "deleted",
+				"id":     id,
+			})
+		default:
+			w.Header().Set("Allow", "GET, PUT, DELETE")
+			writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		}
+	}
+}
+
+// parseID extracts the {id} path variable using Go 1.22+ ServeMux routing.
+func parseID(r *http.Request) (int64, error) {
+	return strconv.ParseInt(r.PathValue("id"), 10, 64)
 }
 
 // corsMiddleware adds permissive CORS headers and short-circ OPTIONS preflight.
