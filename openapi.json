@@ -81,7 +81,22 @@
                     "total_requests": { "type": "integer" },
                     "by_method": { "type": "object", "additionalProperties": { "type": "integer" } },
                     "by_status": { "type": "object", "additionalProperties": { "type": "integer" } },
-                    "last_request": { "type": "string", "format": "date-time" }
+                    "last_request": { "type": "string", "format": "date-time" },
+                    "latency": {
+                      "type": "object",
+                      "description": "Latency over the last 100 requests",
+                      "properties": {
+                        "avg_ms": { "type": "number" },
+                        "min_ms": { "type": "number" },
+                        "max_ms": { "type": "number" },
+                        "p95_ms": { "type": "number" },
+                        "samples": { "type": "integer" }
+                      }
+                    },
+                    "items_total": { "type": "integer" },
+                    "items_public": { "type": "integer" },
+                    "items_secure": { "type": "integer" },
+                    "db_size_bytes": { "type": "integer" }
                   }
                 }
               }

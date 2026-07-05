@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -73,17 +74,26 @@ type stats struct {
 	byMethod    sync.Map // method(string) -> *atomic.Int64
 	byStatus    sync.Map // status(int)    -> *atomic.Int64
 	lastRequest atomic.Value // time.Time
+
+	// Latency ring buffer (last N request durations in microseconds).
+	// Guarded by latMu — writes happen on every request, reads on /stats.
+	latMu  sync.Mutex
+	latBuf []int64 // micros
+	latIdx int     // next write slot
 }
+
+const latencyBufCap = 100
 
 var telemetry = &stats{}
 
 func init() {
 	telemetry.startedAt = time.Now()
 	telemetry.lastRequest.Store(time.Now())
+	telemetry.latBuf = make([]int64, 0, latencyBufCap)
 }
 
 // record updates counters for a finished request.
-func (s *stats) record(method string, status int) {
+func (s *stats) record(method string, status int, elapsed time.Duration) {
 	s.total.Add(1)
 	s.lastRequest.Store(time.Now())
 
@@ -100,6 +110,64 @@ func (s *stats) record(method string, status int) {
 		actual, _ := s.byStatus.LoadOrStore(key, new(atomic.Int64))
 		actual.(*atomic.Int64).Add(1)
 	}
+
+	// Append to the latency ring buffer.
+	s.latMu.Lock()
+	if len(s.latBuf) < latencyBufCap {
+		s.latBuf = append(s.latBuf, elapsed.Microseconds())
+	} else {
+		s.latBuf[s.latIdx] = elapsed.Microseconds()
+		s.latIdx = (s.latIdx + 1) % latencyBufCap
+	}
+	s.latMu.Unlock()
+}
+
+// latencyStats computes avg/min/max/p95 over the ring buffer, in milliseconds.
+func (s *stats) latencyStats() map[string]float64 {
+	s.latMu.Lock()
+	snapshot := make([]int64, len(s.latBuf))
+	copy(snapshot, s.latBuf)
+	s.latMu.Unlock()
+
+	if len(snapshot) == 0 {
+		return map[string]float64{"avg_ms": 0, "min_ms": 0, "max_ms": 0, "p95_ms": 0, "samples": 0}
+	}
+
+	// Sort a copy for min/max/p95.
+	sorted := make([]int64, len(snapshot))
+	copy(sorted, snapshot)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+
+	var sum int64
+	for _, v := range snapshot {
+		sum += v
+	}
+	microsToMs := func(v int64) float64 { return float64(v) / 1000.0 }
+	p95Idx := sorted[(len(sorted)-1)*95/100]
+	return map[string]float64{
+		"avg_ms":  microsToMs(sum / int64(len(snapshot))),
+		"min_ms":  microsToMs(sorted[0]),
+		"max_ms":  microsToMs(sorted[len(sorted)-1]),
+		"p95_ms":  microsToMs(p95Idx),
+		"samples": float64(len(snapshot)),
+	}
+}
+
+// itemCounts returns total + per-scope counts by querying the DB. Cheap on
+// SQLite (uses row counts); lazy so it always reflects current state.
+func itemCounts() (total, pub, sec int64) {
+	_ = db.QueryRow(`SELECT COUNT(*) FROM items;`).Scan(&total)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM items WHERE scope = 'public';`).Scan(&pub)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM items WHERE scope = 'secure';`).Scan(&sec)
+	return
+}
+
+// dbSize returns the on-disk size of the SQLite file in bytes (best-effort).
+func dbSize() int64 {
+	if info, err := os.Stat(dbPath); err == nil {
+		return info.Size()
+	}
+	return 0
 }
 
 // snapshot returns a JSON-friendly view of the counters.
@@ -115,13 +183,19 @@ func (s *stats) snapshot() map[string]any {
 		return true
 	})
 	last, _ := s.lastRequest.Load().(time.Time)
+	totalItems, pubItems, secItems := itemCounts()
 	return map[string]any{
-		"uptime_seconds": int(time.Since(s.startedAt).Seconds()),
-		"started_at":     s.startedAt.UTC().Format(time.RFC3339),
-		"total_requests": s.total.Load(),
-		"by_method":      methods,
-		"by_status":      statuses,
-		"last_request":   last.UTC().Format(time.RFC3339),
+		"uptime_seconds":  int(time.Since(s.startedAt).Seconds()),
+		"started_at":      s.startedAt.UTC().Format(time.RFC3339),
+		"total_requests":  s.total.Load(),
+		"by_method":       methods,
+		"by_status":       statuses,
+		"last_request":    last.UTC().Format(time.RFC3339),
+		"latency":         s.latencyStats(),
+		"items_total":     totalItems,
+		"items_public":    pubItems,
+		"items_secure":    secItems,
+		"db_size_bytes":   dbSize(),
 	}
 }
 
@@ -514,7 +588,7 @@ func routes() http.Handler {
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 		mux.ServeHTTP(sw, r)
 		elapsed := time.Since(start)
-		telemetry.record(r.Method, sw.status)
+		telemetry.record(r.Method, sw.status, elapsed)
 		log.Printf("%s %s %s → %d (%s)", r.RemoteAddr, r.Method, r.URL.Path, sw.status, elapsed)
 	})
 
@@ -625,7 +699,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("Access-Control-Allow-Origin", "*")
-		h.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		h.Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
 		h.Set("Access-Control-Max-Age", "86400") // cache preflight for a day
 

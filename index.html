@@ -17,6 +17,11 @@
     --danger: #ff6b6b;
     --warn: #ffb454;
     --info: #4cb8ff;
+    --json-key: #4cb8ff;
+    --json-str: #4cd7a0;
+    --json-num: #ffb454;
+    --json-bool: #ff6b6b;
+    --json-null: #8b93a7;
   }
   * { box-sizing: border-box; }
   body {
@@ -36,19 +41,22 @@
   .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
   .links a { color: var(--accent-2); font-size: 13px; text-decoration: none; margin-left: 14px; }
   .links a:hover { text-decoration: underline; }
+  kbd {
+    background: var(--panel-2); border: 1px solid var(--border); border-bottom-width: 2px;
+    border-radius: 4px; padding: 1px 6px; font-size: 11px; font-family: ui-monospace, monospace;
+    color: var(--muted);
+  }
 
   /* Stats bar */
   .stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
     gap: 10px;
     margin-bottom: 18px;
   }
   .stat {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
   }
   .stat .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
   .stat .value { font-size: 18px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
@@ -82,6 +90,10 @@
   }
   .badge.public { background: rgba(76, 215, 160, .15); color: var(--accent-2); }
   .badge.secure { background: rgba(124, 92, 255, .15); color: var(--accent); }
+  .badge.type {
+    background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+    text-transform: none; letter-spacing: 0; font-family: ui-monospace, monospace;
+  }
 
   label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
   input, textarea, select {
@@ -123,7 +135,7 @@
     background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
   }
   .filter-bar button.active { border-color: var(--accent); color: var(--accent); }
-  .toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
   .toggle input { width: auto; }
 
   .items { display: flex; flex-direction: column; gap: 10px; }
@@ -132,19 +144,29 @@
     border-radius: 8px; padding: 12px 14px; transition: border-color .15s;
   }
   .item:hover { border-color: #3a4150; }
+  .item.selected { border-color: var(--accent); background: rgba(124,92,255,.06); }
   .item.flash { animation: flash 1s ease; }
   @keyframes flash { 0% { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,92,255,.2); } 100% {} }
-  .item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
   .item-id { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
   .item-date { font-size: 11px; color: var(--muted); margin-left: auto; }
   .item-actions { display: flex; gap: 6px; margin-left: auto; }
   .item-payload {
     font-size: 12.5px; color: var(--text); white-space: pre-wrap;
     font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-    background: rgba(0,0,0,.25); border-radius: 6px; padding: 10px 12px;
+    background: rgba(0,0,0,.3); border-radius: 6px; padding: 10px 12px;
     overflow-x: auto; max-height: 320px; overflow-y: auto;
   }
   .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px; }
+  .row-check { display: flex; align-items: center; gap: 8px; }
+  .row-check input[type=checkbox] { width: auto; }
+
+  /* JSON highlight */
+  .tok-key { color: var(--json-key); }
+  .tok-str { color: var(--json-str); }
+  .tok-num { color: var(--json-num); }
+  .tok-bool { color: var(--json-bool); font-weight: 600; }
+  .tok-null { color: var(--json-null); font-style: italic; }
 
   /* Compose */
   .compose-grid { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: center; }
@@ -157,6 +179,18 @@
   .status-pill.s2 { background: rgba(76,215,160,.18); color: var(--accent-2); }
   .status-pill.s3, .status-pill.s4 { background: rgba(255,180,84,.18); color: var(--warn); }
   .status-pill.s5, .status-pill.err { background: rgba(255,107,107,.18); color: var(--danger); }
+  .timing-bar { display: inline-block; height: 4px; background: var(--accent); border-radius: 2px; vertical-align: middle; margin-left: 6px; max-width: 80px; }
+  .history-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .history-item {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; cursor: pointer; font-size: 12px; display: flex; gap: 8px; align-items: center;
+  }
+  .history-item:hover { border-color: var(--accent); }
+  .history-item .h-method { font-weight: 600; min-width: 50px; }
+  .history-item .h-path { color: var(--text); flex: 1; font-family: ui-monospace, monospace; font-size: 11px; }
+  .history-item .h-status { color: var(--muted); font-size: 11px; }
+  .history-item .h-x { color: var(--muted); cursor: pointer; padding: 0 4px; }
+  .history-item .h-x:hover { color: var(--danger); }
 
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -188,15 +222,20 @@
 <div class="stats" id="stats-bar">
   <div class="stat"><div class="label">Total requests</div><div class="value blue" id="s-total">—</div></div>
   <div class="stat"><div class="label">Uptime</div><div class="value" id="s-uptime">—</div></div>
-  <div class="stat"><div class="label">Items stored</div><div class="value green" id="s-items">—</div></div>
+  <div class="stat"><div class="label">Items stored</div><div class="value green" id="s-items">—</div><div class="sub-mini" id="s-items-breakdown"></div></div>
+  <div class="stat"><div class="label">Avg latency</div><div class="value purple" id="s-latency">—</div><div class="sub-mini" id="s-latency-detail"></div></div>
+  <div class="stat"><div class="label">DB size</div><div class="value" id="s-dbsize">—</div></div>
   <div class="stat"><div class="label">Last activity</div><div class="value" id="s-last">—</div></div>
-  <div class="stat"><div class="label">Methods</div><div class="value purple" id="s-methods" style="font-size:13px">—</div><div class="sub-mini" id="s-statuses"></div></div>
+  <div class="stat"><div class="label">Methods</div><div class="value" id="s-methods" style="font-size:13px">—</div><div class="sub-mini" id="s-statuses"></div></div>
 </div>
 
 <!-- Tabs -->
 <div class="tabs">
   <button class="tab active" data-tab="test">Test</button>
   <button class="tab" data-tab="compose">Compose</button>
+  <span style="margin-left:auto;align-self:center;color:var(--muted);font-size:11px">
+    <kbd>Ctrl</kbd>+<kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> search · <kbd>R</kbd> refresh
+  </span>
 </div>
 
 <!-- TEST TAB -->
@@ -225,7 +264,7 @@
       <h2>Send Payload <span class="badge secure">secure</span></h2>
       <div class="hint">Stored under a protected scope — requires your API key.</div>
       <label for="api-key">API Key</label>
-      <input id="api-key" placeholder="secret-key-123" value="secret-key-123" />
+      <input id="api-key" placeholder="secret-key-123" />
       <input id="s-raw" placeholder="or type a plain string here" style="margin-top:8px" />
       <label for="s-json">JSON payload</label>
       <textarea id="s-json" placeholder='{
@@ -244,14 +283,17 @@
       <div class="list-header">
         <h2 style="margin:0">Stored Items <span id="item-count" class="item-id"></span></h2>
         <div class="toolbar">
-          <input type="search" id="search" placeholder="filter payloads…" oninput="renderItems()" />
+          <input type="search" id="search" placeholder="filter payloads… (Ctrl+K)" />
           <div class="filter-bar">
             <button class="active" data-scope="all" onclick="setFilter('all')">All</button>
             <button data-scope="public" onclick="setFilter('public')">Public</button>
             <button data-scope="secure" onclick="setFilter('secure')">Secure</button>
           </div>
-          <label class="toggle"><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()" /> auto</label>
-          <button class="ghost" onclick="refresh()">↻</button>
+          <label class="toggle"><input type="checkbox" id="auto-refresh" /> auto</label>
+          <button class="ghost" onclick="refresh()" title="Refresh (R)">↻</button>
+          <span id="bulk-actions" style="display:none">
+            <button class="ghost tiny danger" onclick="bulkDelete()" style="color:var(--danger);border-color:var(--danger)">Delete selected (<span id="sel-count">0</span>)</button>
+          </span>
           <button class="ghost danger" onclick="clearScope()" style="color:var(--danger);border-color:var(--danger)">Clear</button>
         </div>
       </div>
@@ -264,7 +306,7 @@
 <div class="tab-pane" id="pane-compose">
   <div class="card">
     <h2>Compose Request</h2>
-    <div class="hint">Fire any method at any path on this server. Useful for manual PUT / DELETE / GET-one testing.</div>
+    <div class="hint">Fire any method at any path on this server. Useful for manual PUT / DELETE / GET-one testing. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to send.</div>
     <div class="compose-grid">
       <label for="c-method" style="margin:0">Method</label>
       <select id="c-method">
@@ -278,19 +320,52 @@
     <div class="btn-row">
       <button onclick="composeSend()">Send</button>
       <button class="ghost" onclick="document.getElementById('c-body').value=''">Clear body</button>
-      <label class="toggle" style="margin-left:auto"><input type="checkbox" id="c-secure" onchange="toggleComposeSecure()" /> send X-API-Key</label>
+      <label class="toggle" style="margin-left:auto"><input type="checkbox" id="c-secure" /> send X-API-Key</label>
     </div>
     <div id="compose-out" class="compose-out" style="display:none"></div>
+    <div id="compose-history" class="history-list"></div>
   </div>
 </div>
 
 <div id="toast" class="toast"></div>
 
 <script>
+/* ════════════════════════════════════════════════════════════════════════════
+   Small-Server UI — round 2
+   ════════════════════════════════════════════════════════════════════════════ */
+const STORE_KEY = 'small-server.prefs.v2';
 const API_KEY_INPUT = () => document.getElementById('api-key').value.trim();
 let currentFilter = 'all';
 let allItems = [];
 let autoTimer = null;
+let selectedIds = new Set();
+let composeHistory = []; // [{method, path, body, secure, status, ms, t}]
+
+/* ── Persisted prefs ── */
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    if (p.apiKey != null) document.getElementById('api-key').value = p.apiKey;
+    if (p.filter) setFilter(p.filter);
+    if (p.tab) activateTab(p.tab);
+    if (p.autoRefresh) { document.getElementById('auto-refresh').checked = true; toggleAutoRefresh(); }
+    if (p.composePath) document.getElementById('c-path').value = p.composePath;
+    if (p.composeMethod) document.getElementById('c-method').value = p.composeMethod;
+    if (p.composeSecure) document.getElementById('c-secure').checked = true;
+  } catch {}
+}
+function savePrefs() {
+  const p = {
+    apiKey: API_KEY_INPUT(),
+    filter: currentFilter,
+    tab: document.querySelector('.tab.active')?.dataset.tab,
+    autoRefresh: document.getElementById('auto-refresh').checked,
+    composePath: document.getElementById('c-path').value,
+    composeMethod: document.getElementById('c-method').value,
+    composeSecure: document.getElementById('c-secure').checked,
+  };
+  localStorage.setItem(STORE_KEY, JSON.stringify(p));
+}
 
 /* ── Toast ── */
 function toast(msg, type = 'ok') {
@@ -301,14 +376,11 @@ function toast(msg, type = 'ok') {
 }
 
 /* ── Tabs ── */
-document.querySelectorAll('.tab').forEach(t => {
-  t.onclick = () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    document.getElementById('pane-' + t.dataset.tab).classList.add('active');
-  };
-});
+function activateTab(name) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
+  document.querySelectorAll('.tab-pane').forEach(x => x.classList.toggle('active', x.id === 'pane-' + name));
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { activateTab(t.dataset.tab); savePrefs(); });
 
 /* ── Helpers ── */
 function clearInput(...ids) { ids.forEach(id => document.getElementById(id).value = ''); }
@@ -319,6 +391,7 @@ function setFilter(scope) {
     b.classList.toggle('active', b.dataset.scope === scope);
   });
   renderItems();
+  savePrefs();
 }
 
 function fillSample(id) {
@@ -351,6 +424,43 @@ async function api(method, url, { headers = {}, body } = {}) {
   return { data, status: res.status };
 }
 
+/* ── JSON syntax highlighting (regex-based, HTML-safe) ── */
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+function highlightJson(jsonStr) {
+  // escape first to be safe, then wrap tokens
+  const esc = escapeHtml(jsonStr);
+  return esc.replace(
+    /(&quot;(?:\\.|[^"\\])*?&quot;)(\s*:)?|\b(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b|\b(true|false)\b|\b(null)\b/g,
+    (match, str, colon, num, bool, nul) => {
+      if (str !== undefined) {
+        return (colon !== undefined)
+          ? `<span class="tok-key">${str}</span>${colon}`   // a key (string followed by :)
+          : `<span class="tok-str">${str}</span>`;          // a string value
+      }
+      if (num !== undefined) return `<span class="tok-num">${num}</span>`;
+      if (bool !== undefined) return `<span class="tok-bool">${bool}</span>`;
+      if (nul !== undefined) return `<span class="tok-null">${nul}</span>`;
+      return match;
+    }
+  );
+}
+
+/* ── Payload type + size ── */
+function payloadType(p) {
+  if (p === null) return 'null';
+  if (Array.isArray(p)) return 'array';
+  return typeof p;
+}
+function fmtBytes(n) {
+  if (n < 1024) return n + 'B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + 'KB';
+  return (n / 1024 / 1024).toFixed(2) + 'MB';
+}
+
 /* ── Create ── */
 async function createPublic() {
   const payload = buildPayload('p-json', 'p-raw');
@@ -360,6 +470,7 @@ async function createPublic() {
     clearInput('p-json', 'p-raw');
     toast('Stored ✓', 'ok');
     await refresh();
+    savePrefs();
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -373,26 +484,20 @@ async function createSecure() {
     clearInput('s-json', 's-raw');
     toast('Stored ✓', 'ok');
     await refresh();
+    savePrefs();
   } catch (e) { toast(e.message, 'error'); }
 }
 
 /* ── Item rendering ── */
-function renderPayload(p) {
-  if (p === null) return 'null';
-  if (typeof p === 'object') {
-    try { return JSON.stringify(p, null, 2); } catch { return String(p); }
-  }
-  return String(p);
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
+function renderPayloadHtml(p) {
+  let str;
+  if (p === null) str = 'null';
+  else if (typeof p === 'object') { try { str = JSON.stringify(p, null, 2); } catch { str = String(p); } }
+  else str = String(p);
+  return highlightJson(str);
 }
 
 function relativeTime(iso) {
-  // iso like "2026-07-03 12:11:59" (SQLite datetime) — normalize.
   const t = new Date(iso.replace(' ', 'T') + 'Z').getTime();
   if (isNaN(t)) return iso;
   const sec = Math.floor((Date.now() - t) / 1000);
@@ -414,25 +519,34 @@ function renderItems() {
   if (!list.length) {
     container.innerHTML = '<div class="empty">' +
       (q ? 'No items match your filter.' : 'No items yet. Send a payload above. ☝️') + '</div>';
+    updateBulkUi();
     return;
   }
 
-  container.innerHTML = list.map(it => `
-    <div class="item" id="item-${it.id}">
+  container.innerHTML = list.map(it => {
+    const checked = selectedIds.has(it.id) ? 'checked' : '';
+    const selCls = selectedIds.has(it.id) ? ' selected' : '';
+    const bytes = new Blob([JSON.stringify(it.payload)]).size;
+    return `
+    <div class="item${selCls}" id="item-${it.id}">
       <div class="item-head">
+        <label class="row-check"><input type="checkbox" ${checked} onchange="toggleSelect(${it.id}, this.checked)" /></label>
         <span class="badge ${it.scope}">${it.scope}</span>
         <span class="item-id">#${it.id}</span>
+        <span class="badge type">${payloadType(it.payload)} · ${fmtBytes(bytes)}</span>
         <span class="item-date" title="${it.created_at}">${relativeTime(it.created_at)}</span>
         <div class="item-actions">
-          <button class="ghost tiny" onclick="copyPayload(${it.id})">copy</button>
-          <button class="ghost tiny" onclick="copyCurl(${it.id})">cURL</button>
+          <button class="ghost tiny" onclick="copyPayload(${it.id})" title="copy JSON">copy</button>
+          <button class="ghost tiny" onclick="copyCurl(${it.id})" title="copy as curl">cURL</button>
+          <button class="ghost tiny" onclick="copyFetch(${it.id})" title="copy as fetch()">fetch</button>
           <button class="ghost tiny" onclick="editItem(${it.id})">edit</button>
           <button class="ghost tiny danger" style="color:var(--danger)" onclick="deleteItem(${it.id})">delete</button>
         </div>
       </div>
-      <div class="item-payload" id="payload-${it.id}">${escapeHtml(renderPayload(it.payload))}</div>
-    </div>
-  `).join('');
+      <div class="item-payload" id="payload-${it.id}">${renderPayloadHtml(it.payload)}</div>
+    </div>`;
+  }).join('');
+  updateBulkUi();
 }
 
 async function refresh() {
@@ -443,14 +557,42 @@ async function refresh() {
       const opts = scope === 'secure' ? { headers: { 'X-API-Key': API_KEY_INPUT() } } : {};
       const { data } = await api('GET', `/${scope}/items`, opts);
       collected.push(...data);
-    } catch (e) {
-      // secure may 401 without key — silently skip
-    }
+    } catch (e) { /* secure may 401 without key — silently skip */ }
   }
   collected.sort((a, b) => b.id - a.id);
+  // prune selections that no longer exist
+  const liveIds = new Set(collected.map(i => i.id));
+  selectedIds = new Set([...selectedIds].filter(id => liveIds.has(id)));
   allItems = collected;
   renderItems();
   refreshStats();
+}
+
+/* ── Selection / bulk ── */
+function toggleSelect(id, on) {
+  if (on) selectedIds.add(id); else selectedIds.delete(id);
+  document.getElementById('item-' + id).classList.toggle('selected', on);
+  updateBulkUi();
+}
+function updateBulkUi() {
+  const n = selectedIds.size;
+  document.getElementById('sel-count').textContent = n;
+  document.getElementById('bulk-actions').style.display = n > 0 ? '' : 'none';
+}
+async function bulkDelete() {
+  if (!selectedIds.size) return;
+  if (!confirm(`Delete ${selectedIds.size} selected item(s)?`)) return;
+  let ok = 0;
+  for (const id of [...selectedIds]) {
+    const it = allItems.find(x => x.id === id);
+    if (!it) continue;
+    const headers = it.scope === 'secure' ? { 'X-API-Key': API_KEY_INPUT() } : {};
+    try { await api('DELETE', `/${it.scope}/items/${id}`, { headers }); ok++; }
+    catch (e) { toast(`#${id}: ${e.message}`, 'error'); }
+  }
+  selectedIds.clear();
+  toast(`Deleted ${ok} item${ok === 1 ? '' : 's'}`, 'ok');
+  await refresh();
 }
 
 /* ── Per-item actions ── */
@@ -473,11 +615,7 @@ async function editItem(id) {
   if (box.dataset.editing === '1') {
     // save
     const raw = box.textContent.trim();
-    try {
-      JSON.parse(raw);
-    } catch (e) {
-      return toast('Invalid JSON: ' + e.message, 'error');
-    }
+    try { JSON.parse(raw); } catch (e) { return toast('Invalid JSON: ' + e.message, 'error'); }
     const headers = it.scope === 'secure' ? { 'X-API-Key': API_KEY_INPUT() } : {};
     try {
       await api('PUT', `/${it.scope}/items/${id}`, { headers, body: raw });
@@ -486,14 +624,17 @@ async function editItem(id) {
     } catch (e) { toast(e.message, 'error'); }
     return;
   }
-  // enter edit mode
   box.dataset.editing = '1';
   box.contentEditable = 'true';
   box.style.outline = '2px solid var(--accent)';
+  // Replace highlighted HTML with raw text for editing.
+  box.textContent = (it.payload === null) ? 'null' :
+    (typeof it.payload === 'object') ? JSON.stringify(it.payload, null, 2) : String(it.payload);
   box.focus();
   const btn = box.closest('.item').querySelector('button[onclick^="editItem"]');
   if (btn) btn.textContent = 'save';
-  document.execCommand('selectAll', false, null);
+  const r = document.createRange(); r.selectNodeContents(box);
+  const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
 }
 
 async function copyPayload(id) {
@@ -509,12 +650,20 @@ function copyCurl(id) {
   const it = allItems.find(x => x.id === id);
   if (!it) return;
   const host = location.origin;
-  const cmd = `curl -X GET ${host}/${it.scope}/items/${it.id}` +
-    (it.scope === 'secure' ? ` \\\n  -H "X-API-Key: ${API_KEY_INPUT()}"` : '');
-  navigator.clipboard.writeText(cmd).then(
-    () => toast('cURL copied ✓', 'ok'),
-    () => toast('Copy failed', 'error')
-  );
+  const key = it.scope === 'secure' ? ` \\\n  -H "X-API-Key: ${API_KEY_INPUT()}"` : '';
+  navigator.clipboard.writeText(`curl -X GET ${host}/${it.scope}/items/${it.id}${key}`)
+    .then(() => toast('cURL copied ✓', 'ok'), () => toast('Copy failed', 'error'));
+}
+
+function copyFetch(id) {
+  const it = allItems.find(x => x.id === id);
+  if (!it) return;
+  const host = location.origin;
+  const opts = { method: 'GET' };
+  if (it.scope === 'secure') opts.headers = { 'X-API-Key': API_KEY_INPUT() };
+  const code = `await fetch('${host}/${it.scope}/items/${it.id}', ${JSON.stringify(opts, null, 2)});\n// returns the item`;
+  navigator.clipboard.writeText(code)
+    .then(() => toast('fetch() copied ✓', 'ok'), () => toast('Copy failed', 'error'));
 }
 
 async function clearScope() {
@@ -525,10 +674,8 @@ async function clearScope() {
   let removed = 0;
   for (const s of scopes) {
     const headers = s === 'secure' ? { 'X-API-Key': API_KEY_INPUT() } : {};
-    try {
-      const { data } = await api('DELETE', `/${s}/items`, { headers });
-      removed += data.removed || 0;
-    } catch (e) { /* may 401 */ }
+    try { const { data } = await api('DELETE', `/${s}/items`, { headers }); removed += data.removed || 0; }
+    catch (e) {}
   }
   toast(`Cleared ${removed} item${removed === 1 ? '' : 's'}`, 'ok');
   await refresh();
@@ -544,6 +691,7 @@ function toggleAutoRefresh() {
     clearInterval(autoTimer);
     autoTimer = null;
   }
+  savePrefs();
 }
 
 /* ── Stats bar ── */
@@ -553,13 +701,21 @@ function fmtUptime(sec) {
   if (sec < 86400) return Math.floor(sec / 3600) + 'h ' + Math.floor((sec % 3600) / 60) + 'm';
   return Math.floor(sec / 86400) + 'd ' + Math.floor((sec % 86400) / 3600) + 'h';
 }
+function fmtMs(v) { return (Math.round(v * 100) / 100) + 'ms'; }
 
 async function refreshStats() {
   try {
     const { data } = await api('GET', '/stats');
-    document.getElementById('s-total').textContent = data.total_requests.toLocaleString();
-    document.getElementById('s-uptime').textContent = fmtUptime(data.uptime_seconds);
-    document.getElementById('s-items').textContent = allItems.length;
+    document.getElementById('s-total').textContent = (data.total_requests || 0).toLocaleString();
+    document.getElementById('s-uptime').textContent = fmtUptime(data.uptime_seconds || 0);
+    document.getElementById('s-items').textContent = data.items_total ?? '—';
+    document.getElementById('s-items-breakdown').textContent =
+      `pub ${data.items_public ?? 0} · sec ${data.items_secure ?? 0}`;
+    const lat = data.latency || {};
+    document.getElementById('s-latency').textContent = lat.samples ? fmtMs(lat.avg_ms) : '—';
+    document.getElementById('s-latency-detail').textContent = lat.samples
+      ? `p95 ${fmtMs(lat.p95_ms)} · max ${fmtMs(lat.max_ms)} · n=${Math.round(lat.samples)}` : '';
+    document.getElementById('s-dbsize').textContent = data.db_size_bytes ? fmtBytes(data.db_size_bytes) : '—';
     document.getElementById('s-last').textContent = data.last_request ? relativeTime(data.last_request) : '—';
     const methods = Object.entries(data.by_method || {}).map(([m, n]) => `${m}:${n}`).join('  ');
     document.getElementById('s-methods').textContent = methods || '—';
@@ -568,11 +724,7 @@ async function refreshStats() {
   } catch { /* server asleep? skip */ }
 }
 
-/* ── Compose tab ── */
-function toggleComposeSecure() {
-  // visual hint only; the actual header is added in composeSend
-}
-
+/* ── Compose ── */
 async function composeSend() {
   const method = document.getElementById('c-method').value;
   const path = document.getElementById('c-path').value.trim();
@@ -580,7 +732,6 @@ async function composeSend() {
   const secure = document.getElementById('c-secure').checked;
   const out = document.getElementById('compose-out');
   out.style.display = 'block';
-
   if (!path) { out.innerHTML = '<span style="color:var(--danger)">Path is required.</span>'; return; }
 
   const headers = {};
@@ -592,19 +743,110 @@ async function composeSend() {
   }
 
   const t0 = performance.now();
+  let status = 0, payload = null, errMsg = null;
   try {
-    const { data, status } = await api(method, path, { headers, body });
-    const ms = Math.round(performance.now() - t0);
-    const klass = 's' + String(status)[0];
-    const pretty = data === null ? '(empty body)' : JSON.stringify(data, null, 2);
-    out.innerHTML = `<span class="status-pill ${klass}">${status}</span> <span style="color:var(--muted);font-size:11px">${method} ${escapeHtml(path)} · ${ms}ms</span>\n\n<span style="color:var(--text)">${escapeHtml(pretty)}</span>`;
+    const res = await fetch(path, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    status = res.status;
+    try { payload = await res.json(); } catch { payload = null; }
+    if (!res.ok && payload && payload.detail) errMsg = payload.detail;
   } catch (e) {
-    const ms = Math.round(performance.now() - t0);
-    out.innerHTML = `<span class="status-pill err">ERR</span> <span style="color:var(--muted);font-size:11px">${method} ${escapeHtml(path)} · ${ms}ms</span>\n\n<span style="color:var(--danger)">${escapeHtml(e.message)}</span>`;
+    errMsg = e.message;
   }
+  const ms = Math.round(performance.now() - t0);
+  savePrefs();
+  renderComposeOut({ method, path, status, payload, errMsg, ms });
+  pushHistory({ method, path, body: bodyRaw, secure, status: status || 'ERR', ms });
 }
 
+function renderComposeOut({ method, path, status, payload, errMsg, ms }) {
+  const out = document.getElementById('compose-out');
+  const klass = 's' + String(status || 'err')[0];
+  const bar = Math.min(80, Math.max(4, ms * 2));      // visual timing bar
+  const pretty = payload === null ? '(empty body)' : JSON.stringify(payload, null, 2);
+  const errLine = errMsg ? `\n\n<span style="color:var(--danger)">⚠ ${escapeHtml(errMsg)}</span>` : '';
+  out.innerHTML = `<span class="status-pill ${klass}">${status || 'ERR'}</span>` +
+    `<span style="color:var(--muted);font-size:11px">${escapeHtml(method)} ${escapeHtml(path)} · ${ms}ms</span>` +
+    `<span class="timing-bar" style="width:${bar}px"></span>\n\n` +
+    `<span style="color:var(--text)">${highlightJson(pretty)}</span>${errLine}`;
+}
+
+function pushHistory(entry) {
+  entry.t = Date.now();
+  composeHistory.unshift(entry);
+  if (composeHistory.length > 10) composeHistory.length = 10;
+  renderHistory();
+}
+function renderHistory() {
+  const el = document.getElementById('compose-history');
+  if (!composeHistory.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Recent (click to replay)</div>' +
+    composeHistory.map((h, i) => {
+      const klass = 's' + String(h.status)[0];
+      return `<div class="history-item" onclick="replayHistory(${i})" title="click to replay">` +
+        `<span class="h-method">${escapeHtml(h.method)}</span>` +
+        `<span class="h-path">${escapeHtml(h.path)}</span>` +
+        `<span class="status-pill ${klass}" style="font-size:10px">${h.status}</span>` +
+        `<span class="h-status">${h.ms}ms</span>` +
+        `<span class="h-x" onclick="event.stopPropagation();composeHistory.splice(${i},1);renderHistory();">✕</span>` +
+        `</div>`;
+    }).join('');
+}
+function replayHistory(i) {
+  const h = composeHistory[i];
+  if (!h) return;
+  document.getElementById('c-method').value = h.method;
+  document.getElementById('c-path').value = h.path;
+  document.getElementById('c-body').value = h.body || '';
+  document.getElementById('c-secure').checked = !!h.secure;
+  toast('Loaded — press Send', 'ok');
+}
+
+/* ── Keyboard shortcuts ── */
+document.addEventListener('keydown', (e) => {
+  const tag = (e.target.tagName || '').toLowerCase();
+  const typing = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
+  // Ctrl/Cmd+Enter sends whichever form is active
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    const tab = document.querySelector('.tab.active')?.dataset.tab;
+    if (tab === 'compose') composeSend();
+    else if (tab === 'test') {
+      // submit the focused-or-last-used scope; default to public
+      (document.activeElement?.closest('#pane-test .card.secure-btn') ? createSecure() : createPublic());
+    }
+    return;
+  }
+  // Ctrl+K or "/" focuses search
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    activateTab('test');
+    document.getElementById('search').focus();
+    return;
+  }
+  if (!typing && e.key === '/') {
+    e.preventDefault();
+    activateTab('test');
+    document.getElementById('search').focus();
+    return;
+  }
+  // "R" refresh when not typing
+  if (!typing && (e.key === 'r' || e.key === 'R')) {
+    e.preventDefault();
+    refresh();
+  }
+});
+document.getElementById('search').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.target.value = ''; renderItems(); e.target.blur(); }
+});
+['api-key', 'p-json', 's-json', 'c-path', 'c-body'].forEach(id =>
+  document.getElementById(id).addEventListener('change', savePrefs));
+
 /* ── Init ── */
+loadPrefs();
 refresh();
 setInterval(refreshStats, 5000);
 </script>
