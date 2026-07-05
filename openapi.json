@@ -64,6 +64,32 @@
         }
       }
     },
+    "/stats": {
+      "get": {
+        "tags": ["meta"],
+        "summary": "Lightweight in-memory telemetry (resets on restart)",
+        "responses": {
+          "200": {
+            "description": "stats snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "uptime_seconds": { "type": "integer" },
+                    "started_at": { "type": "string", "format": "date-time" },
+                    "total_requests": { "type": "integer" },
+                    "by_method": { "type": "object", "additionalProperties": { "type": "integer" } },
+                    "by_status": { "type": "object", "additionalProperties": { "type": "integer" } },
+                    "last_request": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/public/items": {
       "get": {
         "tags": ["public"],

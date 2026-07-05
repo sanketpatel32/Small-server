@@ -16,6 +16,7 @@
     --accent-2: #4cd7a0;
     --danger: #ff6b6b;
     --warn: #ffb454;
+    --info: #4cb8ff;
   }
   * { box-sizing: border-box; }
   body {
@@ -24,11 +25,11 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding: 24px;
+    padding: 20px;
   }
   header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
   }
   h1 { margin: 0; font-size: 22px; font-weight: 600; }
   h1 .dot { color: var(--accent); }
@@ -36,85 +37,126 @@
   .links a { color: var(--accent-2); font-size: 13px; text-decoration: none; margin-left: 14px; }
   .links a:hover { text-decoration: underline; }
 
-  .grid {
+  /* Stats bar */
+  .stats {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
   }
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
-
-  .card {
+  .stat {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
+    border-radius: 10px;
+    padding: 10px 14px;
   }
-  .card h2 {
-    margin: 0 0 6px; font-size: 15px; font-weight: 600;
-    display: flex; align-items: center; gap: 8px;
+  .stat .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value { font-size: 18px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stat .value.green { color: var(--accent-2); }
+  .stat .value.purple { color: var(--accent); }
+  .stat .value.blue { color: var(--info); }
+  .stat .sub-mini { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 16px; background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
   }
-  .hint { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab:hover { color: var(--text); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .card h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .hint { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
 
   .badge {
     font-size: 10px; font-weight: 700; letter-spacing: .5px;
     padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
   }
-  .badge.public  { background: rgba(76, 215, 160, .15); color: var(--accent-2); }
-  .badge.secure  { background: rgba(124, 92, 255, .15); color: var(--accent); }
+  .badge.public { background: rgba(76, 215, 160, .15); color: var(--accent-2); }
+  .badge.secure { background: rgba(124, 92, 255, .15); color: var(--accent); }
 
   label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
-  input, textarea {
+  input, textarea, select {
     width: 100%; background: var(--panel-2); border: 1px solid var(--border);
     color: var(--text); border-radius: 8px; padding: 9px 11px; font-size: 13px;
     font-family: inherit;
   }
-  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-  textarea { resize: vertical; min-height: 140px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 130px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; }
 
-  .btn-row { display: flex; gap: 10px; margin-top: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   button {
-    flex: 1;
     background: var(--accent); color: white; border: none;
-    padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
-    cursor: pointer; transition: opacity .15s;
+    padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity .15s, background .15s;
   }
   button:hover { opacity: .88; }
   button.secure-btn { background: var(--accent-2); color: #0f1115; }
   button.ghost {
-    flex: 0 0 auto; background: var(--panel-2); color: var(--muted);
-    border: 1px solid var(--border); padding: 10px 12px;
+    background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--border); padding: 9px 12px;
   }
   button.ghost:hover { color: var(--text); }
+  button.danger { background: var(--danger); }
+  button.tiny { padding: 4px 9px; font-size: 11px; font-weight: 500; border-radius: 6px; }
   button:disabled { opacity: .5; cursor: not-allowed; }
 
+  /* Items */
   .list-wrap { grid-column: 1 / -1; margin-top: 4px; }
   .list-header {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 12px; flex-wrap: wrap; gap: 10px;
   }
-  .filter-bar { display: flex; gap: 8px; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .toolbar input[type=search] { width: 200px; padding: 6px 10px; }
+  .filter-bar { display: flex; gap: 6px; }
   .filter-bar button {
     flex: 0 0 auto; padding: 6px 12px; font-size: 12px; font-weight: 500;
     background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
   }
   .filter-bar button.active { border-color: var(--accent); color: var(--accent); }
+  .toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  .toggle input { width: auto; }
 
   .items { display: flex; flex-direction: column; gap: 10px; }
   .item {
     background: var(--panel-2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 12px 14px;
+    border-radius: 8px; padding: 12px 14px; transition: border-color .15s;
   }
+  .item:hover { border-color: #3a4150; }
+  .item.flash { animation: flash 1s ease; }
+  @keyframes flash { 0% { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,92,255,.2); } 100% {} }
   .item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .item-id { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .item-id { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; }
+  .item-date { font-size: 11px; color: var(--muted); margin-left: auto; }
+  .item-actions { display: flex; gap: 6px; margin-left: auto; }
   .item-payload {
     font-size: 12.5px; color: var(--text); white-space: pre-wrap;
     font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
     background: rgba(0,0,0,.25); border-radius: 6px; padding: 10px 12px;
-    overflow-x: auto;
-    max-height: 320px; overflow-y: auto;
+    overflow-x: auto; max-height: 320px; overflow-y: auto;
   }
-  .item-date { font-size: 11px; color: var(--muted); margin-top: 6px; }
   .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 24px; }
+
+  /* Compose */
+  .compose-grid { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: center; }
+  .compose-out {
+    margin-top: 14px; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px; font-size: 12.5px;
+    font-family: ui-monospace, monospace; white-space: pre-wrap; max-height: 300px; overflow: auto;
+  }
+  .status-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 11px; }
+  .status-pill.s2 { background: rgba(76,215,160,.18); color: var(--accent-2); }
+  .status-pill.s3, .status-pill.s4 { background: rgba(255,180,84,.18); color: var(--warn); }
+  .status-pill.s5, .status-pill.err { background: rgba(255,107,107,.18); color: var(--danger); }
 
   .toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
@@ -125,6 +167,7 @@
   .toast.show { opacity: 1; }
   .toast.error { border-color: var(--danger); color: var(--danger); }
   .toast.ok { border-color: var(--accent-2); color: var(--accent-2); }
+  .toast.warn { border-color: var(--warn); color: var(--warn); }
 </style>
 </head>
 <body>
@@ -132,63 +175,112 @@
 <header>
   <div>
     <h1>Small<span class="dot">·</span>Server <span style="font-size:12px;color:var(--muted);font-weight:400">test console</span></h1>
-    <div class="sub">Tiny SQLite-backed REST API — accepts ANY JSON on POST · public + secured endpoints on :8795</div>
+    <div class="sub">Tiny Go + SQLite REST API · full CRUD · accepts any JSON · open CORS</div>
   </div>
   <div class="links">
-    <a href="/docs" target="_blank">Swagger Docs</a>
+    <a href="/openapi.json" target="_blank">OpenAPI</a>
+    <a href="/stats" target="_blank">Stats</a>
     <a href="/health" target="_blank">Health</a>
   </div>
 </header>
 
-<div class="grid">
-  <!-- Public create -->
-  <div class="card">
-    <h2>Send Payload <span class="badge public">public</span></h2>
-    <div class="hint">Paste any valid JSON. Objects, arrays, nested — whatever your webhook sends.</div>
-    <input id="p-raw" placeholder="or type a plain string here" />
-    <label for="p-json">JSON payload</label>
-    <textarea id="p-json" placeholder='{
+<!-- Stats bar -->
+<div class="stats" id="stats-bar">
+  <div class="stat"><div class="label">Total requests</div><div class="value blue" id="s-total">—</div></div>
+  <div class="stat"><div class="label">Uptime</div><div class="value" id="s-uptime">—</div></div>
+  <div class="stat"><div class="label">Items stored</div><div class="value green" id="s-items">—</div></div>
+  <div class="stat"><div class="label">Last activity</div><div class="value" id="s-last">—</div></div>
+  <div class="stat"><div class="label">Methods</div><div class="value purple" id="s-methods" style="font-size:13px">—</div><div class="sub-mini" id="s-statuses"></div></div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" data-tab="test">Test</button>
+  <button class="tab" data-tab="compose">Compose</button>
+</div>
+
+<!-- TEST TAB -->
+<div class="tab-pane active" id="pane-test">
+  <div class="grid">
+    <!-- Public create -->
+    <div class="card">
+      <h2>Send Payload <span class="badge public">public</span></h2>
+      <div class="hint">Paste any valid JSON. Objects, arrays, nested — whatever your webhook sends.</div>
+      <input id="p-raw" placeholder="or type a plain string here" />
+      <label for="p-json">JSON payload</label>
+      <textarea id="p-json" placeholder='{
   "event": "user.signup",
   "user": { "id": 42, "email": "a@b.com" },
   "tags": ["new", "trial"]
 }'></textarea>
-    <div class="btn-row">
-      <button onclick="createPublic()">POST /public/items</button>
-      <button class="ghost" onclick="fillSample('p-json')">sample</button>
+      <div class="btn-row">
+        <button onclick="createPublic()">POST /public/items</button>
+        <button class="ghost" onclick="fillSample('p-json')">sample</button>
+        <button class="ghost" onclick="clearInput('p-json','p-raw')">clear</button>
+      </div>
     </div>
-  </div>
 
-  <!-- Secure create -->
-  <div class="card">
-    <h2>Send Payload <span class="badge secure">secure</span></h2>
-    <div class="hint">Stored under a protected scope — requires your API key.</div>
-    <label for="api-key">API Key</label>
-    <input id="api-key" placeholder="secret-key-123" value="secret-key-123" />
-    <input id="s-raw" placeholder="or type a plain string here" />
-    <label for="s-json">JSON payload</label>
-    <textarea id="s-json" placeholder='{
+    <!-- Secure create -->
+    <div class="card">
+      <h2>Send Payload <span class="badge secure">secure</span></h2>
+      <div class="hint">Stored under a protected scope — requires your API key.</div>
+      <label for="api-key">API Key</label>
+      <input id="api-key" placeholder="secret-key-123" value="secret-key-123" />
+      <input id="s-raw" placeholder="or type a plain string here" style="margin-top:8px" />
+      <label for="s-json">JSON payload</label>
+      <textarea id="s-json" placeholder='{
   "secret": "data",
   "numbers": [1, 2, 3]
 }'></textarea>
-    <div class="btn-row">
-      <button class="secure-btn" onclick="createSecure()">POST /secure/items</button>
-      <button class="ghost" onclick="fillSample('s-json')">sample</button>
-    </div>
-  </div>
-
-  <!-- Items list -->
-  <div class="card list-wrap">
-    <div class="list-header">
-      <h2 style="margin:0">Stored Items</h2>
-      <div class="filter-bar">
-        <button class="active" data-scope="all" onclick="setFilter('all')">All</button>
-        <button data-scope="public" onclick="setFilter('public')">Public</button>
-        <button data-scope="secure" onclick="setFilter('secure')">Secure</button>
-        <button onclick="refresh()">↻ Refresh</button>
-        <button onclick="clearAll()" style="border-color:var(--danger);color:var(--danger)">Clear</button>
+      <div class="btn-row">
+        <button class="secure-btn" onclick="createSecure()">POST /secure/items</button>
+        <button class="ghost" onclick="fillSample('s-json')">sample</button>
+        <button class="ghost" onclick="clearInput('s-json','s-raw')">clear</button>
       </div>
     </div>
-    <div id="items" class="items"></div>
+
+    <!-- Items list -->
+    <div class="card list-wrap">
+      <div class="list-header">
+        <h2 style="margin:0">Stored Items <span id="item-count" class="item-id"></span></h2>
+        <div class="toolbar">
+          <input type="search" id="search" placeholder="filter payloads…" oninput="renderItems()" />
+          <div class="filter-bar">
+            <button class="active" data-scope="all" onclick="setFilter('all')">All</button>
+            <button data-scope="public" onclick="setFilter('public')">Public</button>
+            <button data-scope="secure" onclick="setFilter('secure')">Secure</button>
+          </div>
+          <label class="toggle"><input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()" /> auto</label>
+          <button class="ghost" onclick="refresh()">↻</button>
+          <button class="ghost danger" onclick="clearScope()" style="color:var(--danger);border-color:var(--danger)">Clear</button>
+        </div>
+      </div>
+      <div id="items" class="items"></div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPOSE TAB -->
+<div class="tab-pane" id="pane-compose">
+  <div class="card">
+    <h2>Compose Request</h2>
+    <div class="hint">Fire any method at any path on this server. Useful for manual PUT / DELETE / GET-one testing.</div>
+    <div class="compose-grid">
+      <label for="c-method" style="margin:0">Method</label>
+      <select id="c-method">
+        <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option>
+      </select>
+      <label for="c-path" style="margin:0">Path</label>
+      <input id="c-path" value="/public/items" placeholder="/public/items/1" />
+      <label for="c-body" style="margin:0">Body (JSON, optional)</label>
+      <textarea id="c-body" placeholder='{ "key": "value" }' style="min-height:90px"></textarea>
+    </div>
+    <div class="btn-row">
+      <button onclick="composeSend()">Send</button>
+      <button class="ghost" onclick="document.getElementById('c-body').value=''">Clear body</button>
+      <label class="toggle" style="margin-left:auto"><input type="checkbox" id="c-secure" onchange="toggleComposeSecure()" /> send X-API-Key</label>
+    </div>
+    <div id="compose-out" class="compose-out" style="display:none"></div>
   </div>
 </div>
 
@@ -197,7 +289,10 @@
 <script>
 const API_KEY_INPUT = () => document.getElementById('api-key').value.trim();
 let currentFilter = 'all';
+let allItems = [];
+let autoTimer = null;
 
+/* ── Toast ── */
 function toast(msg, type = 'ok') {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -205,12 +300,25 @@ function toast(msg, type = 'ok') {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+/* ── Tabs ── */
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('pane-' + t.dataset.tab).classList.add('active');
+  };
+});
+
+/* ── Helpers ── */
+function clearInput(...ids) { ids.forEach(id => document.getElementById(id).value = ''); }
+
 function setFilter(scope) {
   currentFilter = scope;
   document.querySelectorAll('.filter-bar button[data-scope]').forEach(b => {
     b.classList.toggle('active', b.dataset.scope === scope);
   });
-  refresh();
+  renderItems();
 }
 
 function fillSample(id) {
@@ -226,13 +334,9 @@ function buildPayload(jsonId, rawId) {
   const raw = document.getElementById(rawId).value.trim();
   const json = document.getElementById(jsonId).value.trim();
   if (raw && json) return { _error: "Use only one input — either the plain string OR the JSON box, not both." };
-  if (raw) return raw;                       // store as a plain JSON string
+  if (raw) return raw;
   if (!json) return { _error: "Provide a payload (plain string or JSON)." };
-  try {
-    return JSON.parse(json);                 // store parsed JSON
-  } catch (e) {
-    return { _error: "Invalid JSON: " + e.message };
-  }
+  try { return JSON.parse(json); } catch (e) { return { _error: "Invalid JSON: " + e.message }; }
 }
 
 async function api(method, url, { headers = {}, body } = {}) {
@@ -244,18 +348,18 @@ async function api(method, url, { headers = {}, body } = {}) {
   let data;
   try { data = await res.json(); } catch { data = null; }
   if (!res.ok) throw new Error(data?.detail || `HTTP ${res.status}`);
-  return data;
+  return { data, status: res.status };
 }
 
+/* ── Create ── */
 async function createPublic() {
   const payload = buildPayload('p-json', 'p-raw');
   if (payload._error) return toast(payload._error, 'error');
   try {
     await api('POST', '/public/items', { body: payload });
-    document.getElementById('p-json').value = '';
-    document.getElementById('p-raw').value = '';
+    clearInput('p-json', 'p-raw');
     toast('Stored ✓', 'ok');
-    refresh();
+    await refresh();
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -265,19 +369,15 @@ async function createSecure() {
   if (!key) return toast('API key is required', 'error');
   if (payload._error) return toast(payload._error, 'error');
   try {
-    await api('POST', '/secure/items', {
-      headers: { 'X-API-Key': key },
-      body: payload,
-    });
-    document.getElementById('s-json').value = '';
-    document.getElementById('s-raw').value = '';
+    await api('POST', '/secure/items', { headers: { 'X-API-Key': key }, body: payload });
+    clearInput('s-json', 's-raw');
     toast('Stored ✓', 'ok');
-    refresh();
+    await refresh();
   } catch (e) { toast(e.message, 'error'); }
 }
 
+/* ── Item rendering ── */
 function renderPayload(p) {
-  // Pretty-print any stored payload (object, array, string, number, bool, null)
   if (p === null) return 'null';
   if (typeof p === 'object') {
     try { return JSON.stringify(p, null, 2); } catch { return String(p); }
@@ -291,47 +391,222 @@ function escapeHtml(s) {
   }[c]));
 }
 
-async function refresh() {
+function relativeTime(iso) {
+  // iso like "2026-07-03 12:11:59" (SQLite datetime) — normalize.
+  const t = new Date(iso.replace(' ', 'T') + 'Z').getTime();
+  if (isNaN(t)) return iso;
+  const sec = Math.floor((Date.now() - t) / 1000);
+  if (sec < 5) return 'just now';
+  if (sec < 60) return sec + 's ago';
+  if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
+  if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
+  return Math.floor(sec / 86400) + 'd ago';
+}
+
+function renderItems() {
   const container = document.getElementById('items');
-  const scopes = currentFilter === 'all' ? ['public', 'secure'] : [currentFilter];
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  let list = allItems;
+  if (q) list = list.filter(it => JSON.stringify(it.payload).toLowerCase().includes(q));
 
-  let all = [];
-  for (const scope of scopes) {
-    try {
-      const opts = scope === 'secure' ? { headers: { 'X-API-Key': API_KEY_INPUT() } } : {};
-      const rows = await api('GET', `/${scope}/items`, opts);
-      all.push(...rows);
-    } catch (e) {
-      // secure may 401 without key — silently skip
-    }
-  }
+  document.getElementById('item-count').textContent = `(${list.length})`;
 
-  all.sort((a, b) => b.id - a.id);
-
-  if (!all.length) {
-    container.innerHTML = '<div class="empty">No items yet. Send a payload above. ☝️</div>';
+  if (!list.length) {
+    container.innerHTML = '<div class="empty">' +
+      (q ? 'No items match your filter.' : 'No items yet. Send a payload above. ☝️') + '</div>';
     return;
   }
 
-  container.innerHTML = all.map(it => `
-    <div class="item">
+  container.innerHTML = list.map(it => `
+    <div class="item" id="item-${it.id}">
       <div class="item-head">
         <span class="badge ${it.scope}">${it.scope}</span>
         <span class="item-id">#${it.id}</span>
+        <span class="item-date" title="${it.created_at}">${relativeTime(it.created_at)}</span>
+        <div class="item-actions">
+          <button class="ghost tiny" onclick="copyPayload(${it.id})">copy</button>
+          <button class="ghost tiny" onclick="copyCurl(${it.id})">cURL</button>
+          <button class="ghost tiny" onclick="editItem(${it.id})">edit</button>
+          <button class="ghost tiny danger" style="color:var(--danger)" onclick="deleteItem(${it.id})">delete</button>
+        </div>
       </div>
-      <div class="item-payload">${escapeHtml(renderPayload(it.payload))}</div>
-      <div class="item-date">${it.created_at}</div>
+      <div class="item-payload" id="payload-${it.id}">${escapeHtml(renderPayload(it.payload))}</div>
     </div>
   `).join('');
 }
 
-async function clearAll() {
-  // No DELETE endpoint by design — this is a client-side view clearer only.
-  document.getElementById('items').innerHTML = '<div class="empty">Cleared from view. DB unchanged — delete data.db to reset fully.</div>';
-  toast('View cleared (DB untouched)', 'warn');
+async function refresh() {
+  const scopes = currentFilter === 'all' ? ['public', 'secure'] : [currentFilter];
+  let collected = [];
+  for (const scope of scopes) {
+    try {
+      const opts = scope === 'secure' ? { headers: { 'X-API-Key': API_KEY_INPUT() } } : {};
+      const { data } = await api('GET', `/${scope}/items`, opts);
+      collected.push(...data);
+    } catch (e) {
+      // secure may 401 without key — silently skip
+    }
+  }
+  collected.sort((a, b) => b.id - a.id);
+  allItems = collected;
+  renderItems();
+  refreshStats();
 }
 
+/* ── Per-item actions ── */
+async function deleteItem(id) {
+  const it = allItems.find(x => x.id === id);
+  if (!it) return;
+  if (!confirm(`Delete ${it.scope} item #${id}?`)) return;
+  const headers = it.scope === 'secure' ? { 'X-API-Key': API_KEY_INPUT() } : {};
+  try {
+    await api('DELETE', `/${it.scope}/items/${id}`, { headers });
+    toast(`Deleted #${id}`, 'ok');
+    await refresh();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function editItem(id) {
+  const it = allItems.find(x => x.id === id);
+  if (!it) return;
+  const box = document.getElementById(`payload-${id}`);
+  if (box.dataset.editing === '1') {
+    // save
+    const raw = box.textContent.trim();
+    try {
+      JSON.parse(raw);
+    } catch (e) {
+      return toast('Invalid JSON: ' + e.message, 'error');
+    }
+    const headers = it.scope === 'secure' ? { 'X-API-Key': API_KEY_INPUT() } : {};
+    try {
+      await api('PUT', `/${it.scope}/items/${id}`, { headers, body: raw });
+      toast(`Updated #${id}`, 'ok');
+      await refresh();
+    } catch (e) { toast(e.message, 'error'); }
+    return;
+  }
+  // enter edit mode
+  box.dataset.editing = '1';
+  box.contentEditable = 'true';
+  box.style.outline = '2px solid var(--accent)';
+  box.focus();
+  const btn = box.closest('.item').querySelector('button[onclick^="editItem"]');
+  if (btn) btn.textContent = 'save';
+  document.execCommand('selectAll', false, null);
+}
+
+async function copyPayload(id) {
+  const it = allItems.find(x => x.id === id);
+  if (!it) return;
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(it.payload, null, 2));
+    toast('Payload copied ✓', 'ok');
+  } catch { toast('Copy failed', 'error'); }
+}
+
+function copyCurl(id) {
+  const it = allItems.find(x => x.id === id);
+  if (!it) return;
+  const host = location.origin;
+  const cmd = `curl -X GET ${host}/${it.scope}/items/${it.id}` +
+    (it.scope === 'secure' ? ` \\\n  -H "X-API-Key: ${API_KEY_INPUT()}"` : '');
+  navigator.clipboard.writeText(cmd).then(
+    () => toast('cURL copied ✓', 'ok'),
+    () => toast('Copy failed', 'error')
+  );
+}
+
+async function clearScope() {
+  const scope = currentFilter === 'all' ? null : currentFilter;
+  const target = scope || 'all';
+  if (!confirm(`Delete ALL ${target} items? This cannot be undone.`)) return;
+  const scopes = scope ? [scope] : ['public', 'secure'];
+  let removed = 0;
+  for (const s of scopes) {
+    const headers = s === 'secure' ? { 'X-API-Key': API_KEY_INPUT() } : {};
+    try {
+      const { data } = await api('DELETE', `/${s}/items`, { headers });
+      removed += data.removed || 0;
+    } catch (e) { /* may 401 */ }
+  }
+  toast(`Cleared ${removed} item${removed === 1 ? '' : 's'}`, 'ok');
+  await refresh();
+}
+
+/* ── Auto refresh ── */
+function toggleAutoRefresh() {
+  const on = document.getElementById('auto-refresh').checked;
+  if (on) {
+    autoTimer = setInterval(refresh, 3000);
+    toast('Auto-refresh on (3s)', 'ok');
+  } else if (autoTimer) {
+    clearInterval(autoTimer);
+    autoTimer = null;
+  }
+}
+
+/* ── Stats bar ── */
+function fmtUptime(sec) {
+  if (sec < 60) return sec + 's';
+  if (sec < 3600) return Math.floor(sec / 60) + 'm ' + (sec % 60) + 's';
+  if (sec < 86400) return Math.floor(sec / 3600) + 'h ' + Math.floor((sec % 3600) / 60) + 'm';
+  return Math.floor(sec / 86400) + 'd ' + Math.floor((sec % 86400) / 3600) + 'h';
+}
+
+async function refreshStats() {
+  try {
+    const { data } = await api('GET', '/stats');
+    document.getElementById('s-total').textContent = data.total_requests.toLocaleString();
+    document.getElementById('s-uptime').textContent = fmtUptime(data.uptime_seconds);
+    document.getElementById('s-items').textContent = allItems.length;
+    document.getElementById('s-last').textContent = data.last_request ? relativeTime(data.last_request) : '—';
+    const methods = Object.entries(data.by_method || {}).map(([m, n]) => `${m}:${n}`).join('  ');
+    document.getElementById('s-methods').textContent = methods || '—';
+    const statuses = Object.entries(data.by_status || {}).map(([s, n]) => `${s}:${n}`).join('  ');
+    document.getElementById('s-statuses').textContent = statuses;
+  } catch { /* server asleep? skip */ }
+}
+
+/* ── Compose tab ── */
+function toggleComposeSecure() {
+  // visual hint only; the actual header is added in composeSend
+}
+
+async function composeSend() {
+  const method = document.getElementById('c-method').value;
+  const path = document.getElementById('c-path').value.trim();
+  const bodyRaw = document.getElementById('c-body').value.trim();
+  const secure = document.getElementById('c-secure').checked;
+  const out = document.getElementById('compose-out');
+  out.style.display = 'block';
+
+  if (!path) { out.innerHTML = '<span style="color:var(--danger)">Path is required.</span>'; return; }
+
+  const headers = {};
+  if (secure) headers['X-API-Key'] = API_KEY_INPUT();
+  let body;
+  if (bodyRaw) {
+    try { body = JSON.parse(bodyRaw); }
+    catch (e) { out.innerHTML = '<span style="color:var(--danger)">Invalid JSON body: ' + escapeHtml(e.message) + '</span>'; return; }
+  }
+
+  const t0 = performance.now();
+  try {
+    const { data, status } = await api(method, path, { headers, body });
+    const ms = Math.round(performance.now() - t0);
+    const klass = 's' + String(status)[0];
+    const pretty = data === null ? '(empty body)' : JSON.stringify(data, null, 2);
+    out.innerHTML = `<span class="status-pill ${klass}">${status}</span> <span style="color:var(--muted);font-size:11px">${method} ${escapeHtml(path)} · ${ms}ms</span>\n\n<span style="color:var(--text)">${escapeHtml(pretty)}</span>`;
+  } catch (e) {
+    const ms = Math.round(performance.now() - t0);
+    out.innerHTML = `<span class="status-pill err">ERR</span> <span style="color:var(--muted);font-size:11px">${method} ${escapeHtml(path)} · ${ms}ms</span>\n\n<span style="color:var(--danger)">${escapeHtml(e.message)}</span>`;
+  }
+}
+
+/* ── Init ── */
 refresh();
+setInterval(refreshStats, 5000);
 </script>
 </body>
 </html>

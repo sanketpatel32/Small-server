@@ -83,6 +83,7 @@ Base URL: `http://localhost:8795`
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | `GET`    | `/health` | — | Health check → `{"status":"ok"}` |
+| `GET`    | `/stats` | — | **Telemetry** — request counts, uptime, methods/statuses (in-memory, resets on restart) |
 | **Public** | | | |
 | `GET`    | `/public/items` | none | **List** all public items |
 | `POST`   | `/public/items` | none | **Create** — store any JSON payload |
@@ -98,7 +99,7 @@ Base URL: `http://localhost:8795`
 | `DELETE` | `/secure/items/{id}` | `X-API-Key` | **Delete** one secure item |
 | `DELETE` | `/secure/items` | `X-API-Key` | **Clear all** secure items |
 | **Helpers** | | | |
-| `GET`    | `/` | — | Built-in testing UI |
+| `GET`    | `/` | — | Built-in testing UI (stats bar, per-item CRUD actions, search, auto-refresh, compose-any-request) |
 | `GET`    | `/openapi.json` | — | OpenAPI 3.1 schema (for importers) |
 
 > 🔒 Secure routes require header `X-API-Key: secret-key-123` (override via `API_KEY` env var).

@@ -33,6 +33,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	// Pure-Go SQLite driver — no CGO, so static binaries & cross-compile just work.
@@ -59,6 +61,69 @@ var (
 	dbPath = env("DB_PATH", filepath.Join(".", "data.db"))
 	port   = env("PORT", "8795")
 )
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Telemetry — lightweight in-memory counters (no DB, no deps). Not persistent;
+// resets on every restart.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type stats struct {
+	startedAt   time.Time
+	total       atomic.Int64
+	byMethod    sync.Map // method(string) -> *atomic.Int64
+	byStatus    sync.Map // status(int)    -> *atomic.Int64
+	lastRequest atomic.Value // time.Time
+}
+
+var telemetry = &stats{}
+
+func init() {
+	telemetry.startedAt = time.Now()
+	telemetry.lastRequest.Store(time.Now())
+}
+
+// record updates counters for a finished request.
+func (s *stats) record(method string, status int) {
+	s.total.Add(1)
+	s.lastRequest.Store(time.Now())
+
+	if v, ok := s.byMethod.Load(method); ok {
+		v.(*atomic.Int64).Add(1)
+	} else {
+		actual, _ := s.byMethod.LoadOrStore(method, new(atomic.Int64))
+		actual.(*atomic.Int64).Add(1)
+	}
+	key := strconv.Itoa(status)
+	if v, ok := s.byStatus.Load(key); ok {
+		v.(*atomic.Int64).Add(1)
+	} else {
+		actual, _ := s.byStatus.LoadOrStore(key, new(atomic.Int64))
+		actual.(*atomic.Int64).Add(1)
+	}
+}
+
+// snapshot returns a JSON-friendly view of the counters.
+func (s *stats) snapshot() map[string]any {
+	methods := map[string]int64{}
+	statuses := map[string]int64{}
+	s.byMethod.Range(func(k, v any) bool {
+		methods[k.(string)] = v.(*atomic.Int64).Load()
+		return true
+	})
+	s.byStatus.Range(func(k, v any) bool {
+		statuses[k.(string)] = v.(*atomic.Int64).Load()
+		return true
+	})
+	last, _ := s.lastRequest.Load().(time.Time)
+	return map[string]any{
+		"uptime_seconds": int(time.Since(s.startedAt).Seconds()),
+		"started_at":     s.startedAt.UTC().Format(time.RFC3339),
+		"total_requests": s.total.Load(),
+		"by_method":      methods,
+		"by_status":      statuses,
+		"last_request":   last.UTC().Format(time.RFC3339),
+	}
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Models
@@ -365,6 +430,10 @@ func handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func handleStats(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, telemetry.snapshot())
+}
+
 func handleUI(w http.ResponseWriter, _ *http.Request) {
 	data, err := assets.ReadFile("index.html")
 	if err != nil {
@@ -425,6 +494,7 @@ func routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/health", handleHealth)
+	mux.HandleFunc("/stats", handleStats)
 	mux.HandleFunc("/openapi.json", handleOpenAPI)
 	mux.HandleFunc("/docs", handleUI) // no auto-Swagger in Go; alias to the UI
 	mux.HandleFunc("/", handleUI)
@@ -438,12 +508,14 @@ func routes() http.Handler {
 	mux.HandleFunc("/secure/items", scopeCollectionHandler("secure", true))
 	mux.HandleFunc("/secure/items/{id}", scopeItemHandler("secure", true))
 
-	// Tiny logging middleware.
+	// Tiny logging middleware + telemetry.
 	logging := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 		mux.ServeHTTP(sw, r)
-		log.Printf("%s %s %s → %d (%s)", r.RemoteAddr, r.Method, r.URL.Path, sw.status, time.Since(start))
+		elapsed := time.Since(start)
+		telemetry.record(r.Method, sw.status)
+		log.Printf("%s %s %s → %d (%s)", r.RemoteAddr, r.Method, r.URL.Path, sw.status, elapsed)
 	})
 
 	// CORS middleware (outermost): lets browsers call this API from any origin.
