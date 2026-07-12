@@ -15,9 +15,9 @@
     --bg-elev-2: #191c23;        /* inputs / nested surfaces */
     --border: rgba(255,255,255,0.06);
     --border-bright: rgba(255,255,255,0.10);
-    --text: #e6e9ef;
-    --text-dim: #b4bcc9;
-    --muted: #757d8c;
+    --text: #f0f2f7;
+    --text-dim: #c8cfdb;
+    --muted: #929bac;
     --accent: #7c5cff;
     --accent-soft: rgba(124,92,255,0.16);
     --accent-glow: rgba(124,92,255,0.22);
@@ -26,12 +26,12 @@
     --danger: #ff6b6b;
     --warn: #ffb454;
     --info: #4cb8ff;
-    /* Tuned, slightly desaturated JSON token palette. */
-    --json-key: #6ba4ff;
-    --json-str: #79d8a6;
-    --json-num: #e6a86c;
-    --json-bool: #ff7b9c;
-    --json-null: #757d8c;
+    /* Brighter JSON palette for real legibility on dark bg. */
+    --json-key: #82b4ff;
+    --json-str: #8ae4b4;
+    --json-num: #f0c08a;
+    --json-bool: #ff8fae;
+    --json-null: #929bac;
     --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
     --shadow-md: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.2);
     --ease: cubic-bezier(.4, 0, .2, 1);
@@ -60,11 +60,12 @@
     border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px;
   }
   h1 {
-    margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -0.011em;
+    margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.014em;
     display: flex; align-items: center; gap: 2px;
   }
   h1 .dot { color: var(--accent); margin: 0 1px; }
-  .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; letter-spacing: -0.003em; }
+  h1 .qual { font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 8px; letter-spacing: 0; }
+  .sub { color: var(--muted); font-size: 12.5px; margin-top: 5px; letter-spacing: -0.003em; }
   .links a {
     color: var(--text-dim); font-size: 13px; text-decoration: none; margin-left: 16px;
     transition: color 150ms var(--ease);
@@ -76,35 +77,51 @@
     color: var(--text-dim);
   }
 
-  /* ── Stats bar ── borderless tiles, hierarchy via label/value/sub ── */
+  /* ── Stats bar ── 4 primary metrics, clear value > label hierarchy ── */
   .stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 1px;
-    margin-bottom: 20px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
-    box-shadow: var(--shadow-md);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 10px;
   }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
   .stat {
-    background: var(--bg-elev); padding: 14px 16px;
-    transition: background 200ms var(--ease);
+    background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 200ms var(--ease);
   }
-  .stat:hover { background: var(--bg-elev-2); }
+  .stat:hover { border-color: var(--border-bright); }
   .stat .label {
-    font-size: 10.5px; color: var(--muted); text-transform: uppercase;
-    letter-spacing: .06em; font-weight: 500;
+    font-size: 11px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .08em; font-weight: 500;
   }
   .stat .value {
-    font-size: 19px; font-weight: 600; margin-top: 4px; letter-spacing: -0.015em;
-    font-variant-numeric: tabular-nums;
+    font-size: 26px; font-weight: 600; margin-top: 6px; letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums; color: var(--text); line-height: 1.1;
   }
-  .stat .value.green { color: var(--accent-2); }
-  .stat .value.purple { color: var(--accent); }
-  .stat .value.blue { color: var(--info); }
-  .stat .sub-mini { font-size: 10.5px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .stat .sub-mini {
+    font-size: 11px; color: var(--muted); margin-top: 4px;
+    font-variant-numeric: tabular-nums; letter-spacing: -0.002em;
+  }
+  /* Hero metric — the one number that matters most */
+  .stat.hero {
+    background: linear-gradient(135deg, rgba(124,92,255,0.12), rgba(124,92,255,0.04));
+    border-color: rgba(124,92,255,0.30);
+  }
+  .stat.hero .value { color: #a895ff; font-size: 30px; }
+  .stat.hero .label { color: var(--accent); }
+  /* secondary one-line meta under the primary stats */
+  .stats-meta {
+    display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+    padding: 4px 4px 20px;
+    font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums;
+  }
+  .stats-meta .stats-meta-k {
+    color: var(--muted); font-weight: 500; margin-right: 6px;
+    text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em;
+  }
+  .stats-meta span:empty { display: none; }
 
   /* ── Tabs ── thinner indicator ── */
   .tabs {
@@ -127,28 +144,29 @@
 
   .card {
     background: var(--bg-elev); border: 1px solid var(--border);
-    border-radius: 14px; padding: 18px; box-shadow: var(--shadow-sm);
+    border-radius: 14px; padding: 20px; box-shadow: var(--shadow-sm);
   }
   .card h2 {
-    margin: 0 0 8px; font-size: 14px; font-weight: 600; letter-spacing: -0.006em;
+    margin: 0 0 6px; font-size: 14px; font-weight: 600; letter-spacing: -0.006em;
     display: flex; align-items: center; gap: 8px;
   }
-  .hint { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .hint { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
 
   .badge {
     font-size: 10px; font-weight: 600; letter-spacing: .04em;
     padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
   }
-  .badge.public { background: var(--accent-2-soft); color: var(--accent-2); }
-  .badge.secure { background: var(--accent-soft); color: var(--accent); }
+  .badge.public { background: rgba(76,215,160,0.18); color: #5fe6b3; }
+  .badge.secure { background: rgba(124,92,255,0.20); color: #a895ff; }
   .badge.type {
-    background: rgba(255,255,255,0.03); color: var(--muted);
+    background: transparent; color: var(--muted);
     border: none; text-transform: none; letter-spacing: 0;
     font-family: ui-monospace, monospace; font-weight: 400; font-size: 10.5px;
-    padding: 2px 7px;
+    padding: 0; opacity: 0.7;
   }
 
-  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 5px; font-weight: 500; }
+  label { display: block; font-size: 11.5px; color: var(--text-dim); margin: 14px 0 6px; font-weight: 500; letter-spacing: 0.01em; }
+  input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
   input, textarea, select {
     width: 100%; background: var(--bg-elev-2); border: 1px solid var(--border-bright);
     color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13px;
@@ -159,7 +177,7 @@
     outline: none; border-color: transparent;
     box-shadow: 0 0 0 3px var(--accent-soft);
   }
-  textarea { resize: vertical; min-height: 130px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; line-height: 1.5; }
+  textarea { resize: vertical; min-height: 140px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; line-height: 1.6; }
 
   .btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   button {
@@ -214,20 +232,21 @@
     100% { box-shadow: 0 0 0 0 transparent; }
   }
   .item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-  .item-id { font-size: 11px; color: var(--muted); font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; }
-  .item-date { font-size: 11px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
-  .item-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0.35; transition: opacity 150ms var(--ease); }
-  .item:hover .item-actions, .item.selected .item-actions { opacity: 1; }
+  .item-id { font-size: 12px; color: var(--text-dim); font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .item-date { font-size: 11.5px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+  .item-actions { display: flex; gap: 2px; margin-left: auto; opacity: 0; transition: opacity 150ms var(--ease); }
+  .item:hover .item-actions, .item.selected .item-actions, .item:focus-within .item-actions { opacity: 1; }
   @media (hover: none) { .item-actions { opacity: 1; } } /* touch: always visible */
   .item-payload {
-    font-size: 12.5px; color: var(--text); white-space: pre-wrap;
+    font-size: 13px; color: var(--text); white-space: pre-wrap;
     font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-    background: rgba(0,0,0,0.25); border-radius: 7px; padding: 11px 13px;
-    overflow-x: auto; max-height: 320px; overflow-y: auto; line-height: 1.55;
+    background: rgba(0,0,0,0.35); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+    overflow-x: auto; max-height: 320px; overflow-y: auto; line-height: 1.65;
   }
   .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 28px; }
-  .row-check { display: flex; align-items: center; gap: 8px; }
-  .row-check input[type=checkbox] { width: auto; accent-color: var(--accent); }
+  .row-check { display: flex; align-items: center; gap: 8px; margin-right: 2px; }
+  .row-check input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
 
   /* ── JSON highlight (tuned palette) ── */
   .tok-key { color: var(--json-key); }
@@ -285,8 +304,8 @@
 
 <header>
   <div>
-    <h1>Small<span class="dot">·</span>Server <span style="font-size:12px;color:var(--muted);font-weight:400">test console</span></h1>
-    <div class="sub">Tiny Go + SQLite REST API · full CRUD · accepts any JSON · open CORS</div>
+    <h1>Small<span class="dot">·</span>Server<span class="qual">test console</span></h1>
+    <div class="sub">Tiny Go + SQLite REST API · full CRUD · accepts any JSON</div>
   </div>
   <div class="links">
     <a href="/openapi.json" target="_blank">OpenAPI</a>
@@ -295,15 +314,32 @@
   </div>
 </header>
 
-<!-- Stats bar -->
+<!-- Stats bar: Requests is the hero metric, others are secondary -->
 <div class="stats" id="stats-bar">
-  <div class="stat"><div class="label">Total requests</div><div class="value blue" id="s-total">—</div></div>
-  <div class="stat"><div class="label">Uptime</div><div class="value" id="s-uptime">—</div></div>
-  <div class="stat"><div class="label">Items stored</div><div class="value green" id="s-items">—</div><div class="sub-mini" id="s-items-breakdown"></div></div>
-  <div class="stat"><div class="label">Avg latency</div><div class="value purple" id="s-latency">—</div><div class="sub-mini" id="s-latency-detail"></div></div>
-  <div class="stat"><div class="label">DB size</div><div class="value" id="s-dbsize">—</div></div>
-  <div class="stat"><div class="label">Last activity</div><div class="value" id="s-last">—</div></div>
-  <div class="stat"><div class="label">Methods</div><div class="value" id="s-methods" style="font-size:13px">—</div><div class="sub-mini" id="s-statuses"></div></div>
+  <div class="stat hero">
+    <div class="label">Requests</div>
+    <div class="value" id="s-total">0</div>
+  </div>
+  <div class="stat">
+    <div class="label">Items</div>
+    <div class="value" id="s-items">0</div>
+    <div class="sub-mini" id="s-items-breakdown"></div>
+  </div>
+  <div class="stat">
+    <div class="label">Avg latency</div>
+    <div class="value" id="s-latency">—</div>
+    <div class="sub-mini" id="s-latency-detail"></div>
+  </div>
+  <div class="stat">
+    <div class="label">Uptime</div>
+    <div class="value" id="s-uptime">0s</div>
+  </div>
+</div>
+<div class="stats-meta">
+  <span><span class="stats-meta-k">DB</span> <span id="s-dbsize">—</span></span>
+  <span><span class="stats-meta-k">Last</span> <span id="s-last">—</span></span>
+  <span id="s-methods"></span>
+  <span id="s-statuses"></span>
 </div>
 
 <!-- Tabs -->
@@ -605,14 +641,13 @@ function renderItems() {
     const checked = selectedIds.has(it.id) ? 'checked' : '';
     const selCls = selectedIds.has(it.id) ? ' selected' : '';
     const flashCls = !seenIds.has(it.id) ? ' flash' : '';
-    const bytes = new Blob([JSON.stringify(it.payload)]).size;
     return `
     <div class="item${selCls}${flashCls}" id="item-${it.id}">
       <div class="item-head">
         <label class="row-check"><input type="checkbox" ${checked} onchange="toggleSelect(${it.id}, this.checked)" /></label>
         <span class="badge ${it.scope}">${it.scope}</span>
         <span class="item-id">#${it.id}</span>
-        <span class="badge type">${payloadType(it.payload)} · ${fmtBytes(bytes)}</span>
+        <span class="badge type">${payloadType(it.payload)}</span>
         <span class="item-date" title="${it.created_at}">${relativeTime(it.created_at)}</span>
         <div class="item-actions">
           <button class="ghost tiny" onclick="copyPayload(${it.id})" title="copy JSON">copy</button>
