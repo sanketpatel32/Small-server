@@ -3,496 +3,754 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Small-Server · Test Console</title>
+<title>Small Server · Your workspace</title>
 <style>
-  :root {
-    /* Layered near-black background; cards elevate above it. */
-    --bg: #0a0b0d;
-    --bg-elev: #13151a;          /* card surface */
-    --bg-elev-2: #191c23;        /* inputs / nested surfaces */
-    --border: rgba(255,255,255,0.06);
-    --border-bright: rgba(255,255,255,0.10);
-    --text: #f0f2f7;
-    --text-dim: #c8cfdb;
-    --muted: #929bac;
-    --accent: #7c5cff;
-    --accent-soft: rgba(124,92,255,0.16);
-    --accent-glow: rgba(124,92,255,0.22);
-    --accent-2: #4cd7a0;
-    --accent-2-soft: rgba(76,215,160,0.14);
-    --danger: #ff6b6b;
-    --warn: #ffb454;
-    --info: #4cb8ff;
-    /* Brighter JSON palette for real legibility on dark bg. */
-    --json-key: #82b4ff;
-    --json-str: #8ae4b4;
-    --json-num: #f0c08a;
-    --json-bool: #ff8fae;
-    --json-null: #929bac;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
-    --shadow-md: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.2);
-    --ease: cubic-bezier(.4, 0, .2, 1);
-  }
-  * { box-sizing: border-box; }
-  html, body { background: var(--bg); }
-  body {
-    margin: 0;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    color: var(--text);
-    min-height: 100vh;
-    padding: 24px;
-    /* Subtle top radial glow — the "premium" depth cue. */
-    background:
-      radial-gradient(900px 400px at 50% -100px, rgba(124,92,255,0.08), transparent 70%),
-      var(--bg);
-    background-attachment: fixed;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-    font-feature-settings: "cv05", "ss01";
-  }
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin: -4px 0 22px; padding-bottom: 18px;
-    border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px;
-  }
-  h1 {
-    margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.014em;
-    display: flex; align-items: center; gap: 2px;
-  }
-  h1 .dot { color: var(--accent); margin: 0 1px; }
-  h1 .qual { font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 8px; letter-spacing: 0; }
-  .sub { color: var(--muted); font-size: 12.5px; margin-top: 5px; letter-spacing: -0.003em; }
-  .links a {
-    color: var(--text-dim); font-size: 13px; text-decoration: none; margin-left: 16px;
-    transition: color 150ms var(--ease);
-  }
-  .links a:hover { color: var(--text); }
-  kbd {
-    background: var(--bg-elev); border: 1px solid var(--border-bright); border-bottom-width: 2px;
-    border-radius: 5px; padding: 1px 6px; font-size: 11px; font-family: ui-monospace, monospace;
-    color: var(--text-dim);
-  }
+/* Hallmark · modern-minimal · Coral warmth · everyday workspace · P4 H5 E4 S4 R5 V4 */
+:root {
+  --bg:#f6f5f2;
+  --bg-elev:#fff;
+  --bg-elev-2:#f1f0ec;
+  --border:#e1dfd8;
+  --border-bright:#c8c6be;
+  --text:#262822;
+  --text-dim:#50534c;
+  --muted:#65695f;
+  --accent:#a94430;
+  --accent-soft:#f9e5df;
+  --accent-2:#276349;
+  --accent-2-soft:#e3f0e7;
+  --danger:#a52e2e;
+  --warn:#805c18;
+  --info:#295c85;
+  --json-key:var(--info);
+  --json-str:var(--accent-2);
+  --json-num:var(--accent);
+  --json-bool:var(--warn);
+  --json-null:var(--muted);
+  --font-ui:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-code:ui-monospace,Consolas,monospace;
+  --shadow:0 8px 24px #2628220c}
 
-  /* ── Stats bar ── 4 primary metrics, clear value > label hierarchy ── */
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-bottom: 10px;
-  }
-  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
-  .stat {
-    background: var(--bg-elev); border: 1px solid var(--border);
-    border-radius: 12px; padding: 16px 18px;
-    box-shadow: var(--shadow-sm);
-    transition: border-color 200ms var(--ease);
-  }
-  .stat:hover { border-color: var(--border-bright); }
-  .stat .label {
-    font-size: 11px; color: var(--muted); text-transform: uppercase;
-    letter-spacing: .08em; font-weight: 500;
-  }
-  .stat .value {
-    font-size: 26px; font-weight: 600; margin-top: 6px; letter-spacing: -0.02em;
-    font-variant-numeric: tabular-nums; color: var(--text); line-height: 1.1;
-  }
-  .stat .sub-mini {
-    font-size: 11px; color: var(--muted); margin-top: 4px;
-    font-variant-numeric: tabular-nums; letter-spacing: -0.002em;
-  }
-  /* Hero metric — the one number that matters most */
-  .stat.hero {
-    background: linear-gradient(135deg, rgba(124,92,255,0.12), rgba(124,92,255,0.04));
-    border-color: rgba(124,92,255,0.30);
-  }
-  .stat.hero .value { color: #a895ff; font-size: 30px; }
-  .stat.hero .label { color: var(--accent); }
-  /* secondary one-line meta under the primary stats */
-  .stats-meta {
-    display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
-    padding: 4px 4px 20px;
-    font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums;
-  }
-  .stats-meta .stats-meta-k {
-    color: var(--muted); font-weight: 500; margin-right: 6px;
-    text-transform: uppercase; font-size: 10px; letter-spacing: 0.06em;
-  }
-  .stats-meta span:empty { display: none; }
+* {
+  box-sizing:border-box}
+html,body {
+  overflow-x:clip;
+  background:var(--bg)}
+body {
+  margin:0;
+  color:var(--text);
+  font:15px/1.6 var(--font-ui);
+  -webkit-font-smoothing:antialiased}
+button,input,textarea,select {
+  font:inherit}
+button,a,summary {
+  -webkit-tap-highlight-color:transparent}
+button,a,summary,input,textarea,select {
+  scroll-margin:24px}
+a {
+  color:var(--text-dim);
+  text-decoration:none}
+a:hover {
+  text-decoration:underline}
+:focus-visible {
+  outline:3px solid var(--accent);
+  outline-offset:3px}
+h1,h2,h3 {
+  line-height:1.25;
+  letter-spacing:-.025em;
+  margin:0;
+  overflow-wrap:anywhere;
+  font-style:normal}
+h1 {
+  font-size:24px}
+h2 {
+  font-size:21px}
+h3 {
+  font-size:16px}
+.app-shell {
+  max-width:1200px;
+  padding:0 32px;
+  margin:auto}
+.app-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  padding:28px 0;
+  border-bottom:1px solid var(--border)}
+.brand {
+  display:flex;
+  align-items:center;
+  gap:12px}
+.brand-mark {
+  width:32px;
+  height:32px;
+  border:9px solid var(--accent);
+  border-radius:9px}
+.sub {
+  color:var(--muted);
+  font-size:13px;
+  margin-top:3px}
+.header-actions {
+  display:flex;
+  gap:24px;
+  align-items:center}
+.access-panel {
+  position:relative}
+.access-panel summary {
+  font-weight:600;
+  cursor:pointer;
+  min-height:44px;
+  display:flex;
+  align-items:center}
+.access-content {
+  position:absolute;
+  right:0;
+  top:48px;
+  z-index:10;
+  width:310px;
+  max-width:calc(100vw - 32px);
+  background:var(--bg-elev);
+  border:1px solid var(--border);
+  padding:24px;
+  border-radius:14px;
+  box-shadow:var(--shadow)}
+.tabs {
+  display:flex;
+  gap:6px;
+  padding:22px 0}
+.tab {
+  background:transparent;
+  color:var(--text-dim);
+  border:1px solid transparent;
+  border-radius:8px;
+  padding:10px 18px;
+  white-space:nowrap}
+.tab.active {
+  background:var(--text);
+  color:var(--bg-elev)}
+.tab-pane {
+  display:none}
+.tab-pane.active {
+  display:block}
+.page-heading {
+  margin:12px 0 28px}
+.page-heading h2 {
+  font-size:32px}
+.page-heading p {
+  color:var(--muted);
+  margin:8px 0 0;
+  max-width:64ch}
+.grid,.lab-grid {
+  display:grid;
+  grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);
+  gap:24px;
+  align-items:start}
+.card {
+  min-width:0;
+  background:var(--bg-elev);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:28px}
+.card h2 {
+  font-size:19px}
+.hint {
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.65;
+  margin:10px 0 16px}
+.hint:last-child {
+  margin-bottom:0}
+label {
+  display:block;
+  font-size:13px;
+  font-weight:600;
+  margin:20px 0 8px}
+input,textarea,select {
+  width:100%;
+  border:1px solid var(--border-bright);
+  border-radius:8px;
+  background:var(--bg-elev);
+  color:var(--text);
+  padding:11px 13px;
+  min-height:46px}
+textarea {
+  resize:vertical;
+  min-height:144px;
+  line-height:1.6}
+input::placeholder,textarea::placeholder {
+  color:var(--muted)}
+input[type=checkbox] {
+  width:17px;
+  min-height:17px;
+  height:17px;
+  accent-color:var(--accent-2)}
+input[type=file] {
+  padding:24px;
+  background:var(--bg);
+  border:1px dashed var(--border-bright)}
+input[type=file]::file-selector-button {
+  font:inherit;
+  background:var(--bg-elev);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:10px 14px;
+  margin-right:12px;
+  cursor:pointer}
+button {
+  border:1px solid var(--text);
+  background:var(--text);
+  color:var(--bg-elev);
+  border-radius:8px;
+  padding:10px 18px;
+  min-height:44px;
+  cursor:pointer;
+  font-weight:600;
+  white-space:nowrap}
+button:hover {
+  filter:brightness(.94)}
+button:active {
+  transform:translateY(1px)}
+button:disabled {
+  opacity:.5;
+  cursor:not-allowed;
+  transform:none}
+.ghost {
+  background:var(--bg-elev);
+  color:var(--text-dim);
+  border-color:var(--border)}
+.danger {
+  color:var(--danger);
+  background:var(--bg-elev);
+  border-color:var(--border)}
+.tiny {
+  padding:5px 10px;
+  font-size:12px;
+  min-height:36px}
+.btn-row {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:22px;
+  flex-wrap:wrap}
+.btn-row .primary {
+  flex:1}
+.advanced {
+  border-top:1px solid var(--border);
+  margin-top:24px;
+  padding-top:16px}
+.advanced summary,.server-details summary {
+  color:var(--text-dim);
+  cursor:pointer;
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  font-weight:600}
+.advanced summary::before,.server-details summary::before {
+  content:'+';
+  font-size:20px;
+  font-weight:400}
+.advanced[open] summary::before,.server-details[open] summary::before {
+  content:'−'}
+.toggle {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  font-size:12px;
+  font-weight:400}
+.visibility-help {
+  padding:12px 14px;
+  border-radius:8px;
+  background:var(--bg);
+  color:var(--muted);
+  font-size:13px;
+  margin:16px 0}
+.list-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:20px}
+.toolbar {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:12px;
+  margin-bottom:20px}
+.toolbar input[type=search] {
+  flex:1;
+  min-width:140px}
+.filter-bar {
+  display:flex;
+  gap:4px;
+  flex-wrap:wrap}
+.filter-bar button {
+  background:var(--bg);
+  border-color:transparent;
+  color:var(--text-dim);
+  font-size:12px;
+  padding:6px 10px;
+  min-height:38px}
+.filter-bar button.active {
+  background:var(--accent-2-soft);
+  color:var(--accent-2)}
+.items {
+  display:flex;
+  flex-direction:column;
+  gap:12px}
+.item {
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:18px;
+  min-width:0}
+.item.selected {
+  border-color:var(--accent-2)}
+.item-head {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px}
+.item-date {
+  color:var(--muted);
+  font-size:12px;
+  margin-left:auto}
+.item-id {
+  font-size:12px;
+  color:var(--muted);
+  overflow-wrap:anywhere}
+.item-actions {
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:12px;
+  opacity:1}
+.item-payload {
+  font-family:var(--font-code);
+  font-size:13px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  margin-top:12px;
+  max-height:280px;
+  overflow:auto;
+  padding:14px;
+  background:var(--bg);
+  border-radius:8px}
+.badge {
+  font-size:11px;
+  padding:3px 8px;
+  border-radius:5px;
+  background:var(--bg-elev-2);
+  color:var(--text-dim)}
+.badge.public {
+  background:var(--bg-elev-2)}
+.badge.secure {
+  background:var(--accent-2-soft);
+  color:var(--accent-2)}
+.badge.type {
+  display:none}
+.row-check {
+  margin:0;
+  display:flex}
+.empty {
+  text-align:center;
+  color:var(--muted);
+  padding:36px 12px;
+  font-size:14px}
+.empty strong {
+  display:block;
+  color:var(--text);
+  margin-bottom:8px}
+.compose-grid label {
+  margin-top:16px}
+.compose-out {
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:24px;
+  margin-top:20px;
+  overflow-wrap:anywhere;
+  background:var(--bg)}
+.compose-out pre {
+  font:12px/1.7 var(--font-code);
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  max-height:360px;
+  overflow:auto}
+.result-title {
+  font-size:20px;
+  font-weight:650}
+.status-pill {
+  font-size:12px;
+  font-weight:600}
+.history-list {
+  margin-top:24px}
+.history-item {
+  background:var(--bg-elev);
+  color:var(--text-dim);
+  border:0;
+  border-bottom:1px solid var(--border);
+  border-radius:0;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  width:100%;
+  text-align:left;
+  font-size:12px;
+  padding:12px 0}
+.h-path {
+  flex:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis}
+.h-status {
+  color:var(--muted)}
+.server-details {
+  border-top:1px solid var(--border);
+  margin:40px 0 24px;
+  padding-top:12px}
+.stats {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+  margin:16px 0}
+.stat {
+  padding:12px 0}
+.stat .label {
+  font-size:12px;
+  color:var(--muted)}
+.stat .value {
+  font-size:23px;
+  font-weight:600}
+.sub-mini,.stats-meta {
+  font-size:12px;
+  color:var(--muted)}
+.stats-meta {
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap}
+.footer {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  color:var(--muted);
+  font-size:12px;
+  padding:12px 0 30px}
+.toast {
+  position:fixed;
+  bottom:24px;
+  left:50%;
+  transform:translateX(-50%);
+  background:var(--text);
+  color:var(--bg-elev);
+  padding:14px 22px;
+  border-radius:10px;
+  max-width:calc(100vw - 32px);
+  opacity:0;
+  pointer-events:none;
+  z-index:50;
+  box-shadow:var(--shadow)}
+.toast.show {
+  opacity:1}
+.toast.error {
+  background:var(--danger)}
+.tok-key {
+  color:var(--json-key)}
+.tok-str {
+  color:var(--json-str)}
+.tok-num {
+  color:var(--json-num)}
+.tok-bool {
+  color:var(--json-bool)}
+.tok-null {
+  color:var(--json-null)}
+kbd {
+  font-family:var(--font-code);
+  font-size:11px}
+ [hidden] {
+  display:none!important}
 
-  /* ── Tabs ── thinner indicator ── */
-  .tabs {
-    display: flex; gap: 2px; margin-bottom: 18px;
-    border-bottom: 1px solid var(--border); align-items: center;
-  }
-  .tab {
-    padding: 9px 14px; background: none; border: none; color: var(--muted);
-    cursor: pointer; font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent;
-    margin-bottom: -1px; transition: color 150ms var(--ease), border-color 150ms var(--ease);
-  }
-  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
-  .tab:hover { color: var(--text); }
-  .tab-pane { display: none; }
-  .tab-pane.active { display: block; animation: fadeIn 180ms var(--ease); }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+@media(max-width:768px) {
+  .app-shell {
+  padding:0 20px}
+.grid,.lab-grid {
+  grid-template-columns:minmax(0,1fr)}
+.app-header {
+  padding:22px 0;
+  gap:12px}
+.header-actions {
+  gap:14px}
+.header-actions>a {
+  display:none}
+.card {
+  padding:22px}
+.page-heading h2 {
+  font-size:28px}
+.tab {
+  padding:10px 14px}
+.stats {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+@media(max-width:414px) {
+  .app-shell {
+  padding:0 16px}
+.brand-mark {
+  display:none}
+h1 {
+  font-size:21px}
+.sub {
+  font-size:12px}
+.tabs {
+  gap:3px}
+.tab {
+  padding:10px 11px;
+  font-size:13px}
+.card {
+  padding:20px}
+.list-header {
+  align-items:flex-start;
+  flex-wrap:wrap}
+.btn-row {
+  gap:8px}
+.page-heading h2 {
+  font-size:26px}
+}
 
-  .card {
-    background: var(--bg-elev); border: 1px solid var(--border);
-    border-radius: 14px; padding: 20px; box-shadow: var(--shadow-sm);
-  }
-  .card h2 {
-    margin: 0 0 6px; font-size: 14px; font-weight: 600; letter-spacing: -0.006em;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .hint { font-size: 12px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+@media(prefers-reduced-motion:reduce) {
+  * {
+  animation:none!important;
+  transition:none!important;
+  scroll-behavior:auto!important}
+}
 
-  .badge {
-    font-size: 10px; font-weight: 600; letter-spacing: .04em;
-    padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
-  }
-  .badge.public { background: rgba(76,215,160,0.18); color: #5fe6b3; }
-  .badge.secure { background: rgba(124,92,255,0.20); color: #a895ff; }
-  .badge.type {
-    background: transparent; color: var(--muted);
-    border: none; text-transform: none; letter-spacing: 0;
-    font-family: ui-monospace, monospace; font-weight: 400; font-size: 10.5px;
-    padding: 0; opacity: 0.7;
-  }
-
-  label { display: block; font-size: 11.5px; color: var(--text-dim); margin: 14px 0 6px; font-weight: 500; letter-spacing: 0.01em; }
-  input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; vertical-align: middle; }
-  input, textarea, select {
-    width: 100%; background: var(--bg-elev-2); border: 1px solid var(--border-bright);
-    color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13px;
-    font-family: inherit; transition: border-color 150ms var(--ease), box-shadow 150ms var(--ease);
-  }
-  input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.7; }
-  input:focus, textarea:focus, select:focus {
-    outline: none; border-color: transparent;
-    box-shadow: 0 0 0 3px var(--accent-soft);
-  }
-  textarea { resize: vertical; min-height: 140px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; line-height: 1.6; }
-
-  .btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  button {
-    background: linear-gradient(135deg, #7c5cff 0%, #6d4eff 100%);
-    color: white; border: none; padding: 9px 15px; border-radius: 8px;
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: transform 80ms var(--ease), box-shadow 150ms var(--ease), opacity 150ms var(--ease);
-    box-shadow: 0 1px 2px rgba(0,0,0,.2);
-  }
-  button:hover { box-shadow: 0 0 0 3px var(--accent-glow); }
-  button:active { transform: translateY(1px); }
-  button.secure-btn { background: linear-gradient(135deg, #4cd7a0 0%, #38c290 100%); color: #0a0b0d; }
-  button.ghost {
-    background: rgba(255,255,255,0.03); color: var(--text-dim);
-    border: 1px solid var(--border-bright); padding: 9px 12px; box-shadow: none;
-  }
-  button.ghost:hover { background: rgba(255,255,255,0.06); color: var(--text); box-shadow: none; }
-  button.danger { background: var(--danger); }
-  button.tiny { padding: 4px 9px; font-size: 11px; font-weight: 500; border-radius: 6px; box-shadow: none; }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-
-  /* ── Items ── */
-  .list-wrap { grid-column: 1 / -1; margin-top: 4px; }
-  .list-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
-  }
-  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .toolbar input[type=search] { width: 200px; padding: 6px 10px; }
-  .filter-bar { display: flex; gap: 4px; background: rgba(255,255,255,0.03); padding: 3px; border-radius: 8px; }
-  .filter-bar button {
-    flex: 0 0 auto; padding: 5px 11px; font-size: 12px; font-weight: 500;
-    background: transparent; border: none; color: var(--text-dim);
-    box-shadow: none; border-radius: 6px;
-  }
-  .filter-bar button:hover { background: rgba(255,255,255,0.04); color: var(--text); box-shadow: none; }
-  .filter-bar button.active { background: var(--accent-soft); color: var(--accent); }
-  .toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; }
-  .toggle input { width: auto; accent-color: var(--accent); }
-
-  .items { display: flex; flex-direction: column; gap: 8px; }
-  .item {
-    background: var(--bg-elev-2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px 14px;
-    transition: border-color 150ms var(--ease), background 150ms var(--ease), transform 150ms var(--ease);
-  }
-  .item:hover { border-color: var(--border-bright); background: #1c1f27; }
-  .item.selected { border-color: var(--accent); background: rgba(124,92,255,0.05); }
-  .item.flash { animation: flash 1200ms var(--ease); }
-  @keyframes flash {
-    0% { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-    100% { box-shadow: 0 0 0 0 transparent; }
-  }
-  .item-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-  .item-id { font-size: 12px; color: var(--text-dim); font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums; font-weight: 500; }
-  .item-date { font-size: 11.5px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
-  .item-actions { display: flex; gap: 2px; margin-left: auto; opacity: 0; transition: opacity 150ms var(--ease); }
-  .item:hover .item-actions, .item.selected .item-actions, .item:focus-within .item-actions { opacity: 1; }
-  @media (hover: none) { .item-actions { opacity: 1; } } /* touch: always visible */
-  .item-payload {
-    font-size: 13px; color: var(--text); white-space: pre-wrap;
-    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
-    background: rgba(0,0,0,0.35); border: 1px solid var(--border);
-    border-radius: 8px; padding: 12px 14px;
-    overflow-x: auto; max-height: 320px; overflow-y: auto; line-height: 1.65;
-  }
-  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 28px; }
-  .row-check { display: flex; align-items: center; gap: 8px; margin-right: 2px; }
-  .row-check input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }
-
-  /* ── JSON highlight (tuned palette) ── */
-  .tok-key { color: var(--json-key); }
-  .tok-str { color: var(--json-str); }
-  .tok-num { color: var(--json-num); }
-  .tok-bool { color: var(--json-bool); font-weight: 600; }
-  .tok-null { color: var(--json-null); font-style: italic; }
-
-  /* ── Compose ── */
-  .compose-grid { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: center; }
-  .compose-out {
-    margin-top: 14px; background: rgba(0,0,0,0.25); border: 1px solid var(--border);
-    border-radius: 10px; padding: 14px; font-size: 12.5px;
-    font-family: ui-monospace, monospace; white-space: pre-wrap; max-height: 300px; overflow: auto;
-    line-height: 1.55;
-  }
-  .status-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; }
-  .status-pill.s2 { background: var(--accent-2-soft); color: var(--accent-2); }
-  .status-pill.s3, .status-pill.s4 { background: rgba(255,180,84,.14); color: var(--warn); }
-  .status-pill.s5, .status-pill.err { background: rgba(255,107,107,.14); color: var(--danger); }
-  .timing-bar {
-    display: inline-block; height: 4px; background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    border-radius: 2px; vertical-align: middle; margin-left: 8px; max-width: 80px; opacity: 0.7;
-  }
-  .history-list { margin-top: 14px; display: flex; flex-direction: column; gap: 4px; }
-  .history-item {
-    background: transparent; border: 1px solid transparent; border-radius: 7px;
-    padding: 8px 10px; cursor: pointer; font-size: 12px; display: flex; gap: 10px; align-items: center;
-    transition: background 120ms var(--ease), border-color 120ms var(--ease);
-  }
-  .history-item:hover { background: rgba(255,255,255,0.04); border-color: var(--border-bright); }
-  .history-item .h-method { font-weight: 600; min-width: 50px; font-size: 11px; font-variant-numeric: tabular-nums; }
-  .history-item .h-path { color: var(--text-dim); flex: 1; font-family: ui-monospace, monospace; font-size: 11.5px; }
-  .history-item .h-status { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-  .history-item .h-x { color: var(--muted); cursor: pointer; padding: 0 4px; transition: color 120ms var(--ease); }
-  .history-item .h-x:hover { color: var(--danger); }
-
-  /* ── Toast — slide up + fade ── */
-  .toast {
-    position: fixed; bottom: 24px; left: 50%;
-    transform: translate(-50%, 12px);
-    background: var(--bg-elev); border: 1px solid var(--border-bright);
-    padding: 11px 18px; border-radius: 10px; font-size: 13px; font-weight: 500;
-    box-shadow: var(--shadow-md);
-    opacity: 0; pointer-events: none; z-index: 100;
-    transition: opacity 200ms var(--ease), transform 200ms var(--ease);
-  }
-  .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  .toast.error { border-color: rgba(255,107,107,0.4); color: var(--danger); }
-  .toast.ok { border-color: rgba(76,215,160,0.4); color: var(--accent-2); }
-  .toast.warn { border-color: rgba(255,180,84,0.4); color: var(--warn); }
-  body { max-width: 1440px; margin: auto; }
-  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 4px; }
-  .scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 16px 0 24px; }
-  .scenario-grid button { text-align: left; padding: 14px; white-space: normal; }
-  .scenario-grid small { display: block; color: var(--muted); font-weight: 400; margin-top: 6px; line-height: 1.5; }
-  .lab-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-  .lab-grid .card { min-width: 0; }
-  .compose-out { min-height: 180px; max-height: 560px; overflow-wrap: anywhere; }
-  .history-item { width: 100%; text-align: left; color: var(--text); }
-  .h-path { overflow-wrap: anywhere; min-width: 0; }
-  .tabs { flex-wrap: wrap; }
-  @media (max-width: 860px) { .lab-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 480px) { body { padding: 14px; } .compose-grid { grid-template-columns: 1fr; } .toolbar input[type=search] { width: 100%; } .links a { margin: 0 12px 0 0; } }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-
-<header>
-  <div>
-    <h1>Small<span class="dot">·</span>Server<span class="qual">test console</span></h1>
-    <div class="sub">Your local API playground · store payloads, inspect requests, test failure paths</div>
-  </div>
-  <div class="links">
-    <a href="/docs">Documentation</a>
-    <a href="/openapi.json" target="_blank">OpenAPI</a>
-    <a href="/stats" target="_blank">Stats</a>
-    <a href="/health" target="_blank">Health</a>
-  </div>
+<div class="app-shell">
+<header class="app-header">
+<div class="brand">
+<span class="brand-mark" aria-hidden="true">
+</span>
+<div>
+<h1>Small Server</h1>
+<div class="sub">Your testing workspace</div>
+</div>
+</div>
+<div class="header-actions">
+<a href="/docs">Help &amp; docs</a>
+<details id="access-settings" class="access-panel">
+<summary>Access key</summary>
+<div class="access-content">
+<h3>Unlock private actions</h3>
+<p class="hint">Enter your key once to view private data and manage files. It stays here until you close or reload this page.</p>
+<label for="api-key">Your access key</label>
+<input id="api-key" type="password" autocomplete="off" placeholder="Paste your access key">
+<div class="btn-row">
+<button class="primary" onclick="applyAccessKey()">Use key</button>
+</div>
+<p id="access-status" class="hint" role="status" aria-live="polite">
+</p>
+</div>
+</details>
+</div>
 </header>
-
-<!-- Stats bar: Requests is the hero metric, others are secondary -->
+<nav class="tabs" aria-label="Workspace">
+<button class="tab active" data-tab="test" aria-pressed="true">Save data</button>
+<button class="tab" data-tab="compose" aria-pressed="false">Try a test</button>
+<button class="tab" data-tab="uploads" aria-pressed="false">Files</button>
+</nav>
+<main>
+<section class="tab-pane active" id="pane-test" aria-label="Save data">
+<div class="page-heading">
+<h2>Save something.</h2>
+<p>A message, a sample, or a bit of data. Keep it here and come back to it later.</p>
+</div>
+<div class="grid">
+<section class="card">
+<h2>New saved data</h2>
+<label for="p-raw">What would you like to save?</label><textarea id="p-raw" placeholder="Type a message or paste some text…"></textarea><label for="save-scope">Who can view it?</label>
+<select id="save-scope">
+<option value="public">Anyone · public</option>
+<option value="secure">Only people with the access key · private</option>
+</select>
+<p class="visibility-help">Public data is visible to anyone using this server. Choose private for data that needs an access key.</p>
+<details class="advanced" id="json-settings">
+<summary>Use JSON instead</summary>
+<p class="hint">For structured data. Leave the message above empty when using this field.</p>
+<label for="p-json">JSON data</label><textarea id="p-json" placeholder='{"message":"Hello"}'></textarea><button class="ghost tiny" onclick="fillSample('p-json')">Load example</button>
+</details>
+<div class="btn-row">
+<button id="save-data" class="primary" onclick="saveData()">Save data</button>
+<button class="ghost" onclick="clearInput('p-json','p-raw')">Clear</button>
+</div><textarea id="s-json" hidden aria-hidden="true"></textarea><input id="s-raw" hidden aria-hidden="true">
+</section>
+<section class="card">
+<div class="list-header">
+<h2>Your saved data <span id="item-count" class="item-id">
+</span>
+</h2>
+<button class="ghost tiny" onclick="refresh()">Refresh</button>
+</div>
+<div class="toolbar">
+<input type="search" id="search" aria-label="Search saved data" placeholder="Search saved data…">
+</div>
+<div class="toolbar">
+<div class="filter-bar">
+<button class="active" data-scope="all" onclick="setFilter('all')">All</button>
+<button data-scope="public" onclick="setFilter('public')">Public</button>
+<button data-scope="secure" onclick="setFilter('secure')">Private</button>
+</div>
+<label class="toggle">
+<input type="checkbox" id="auto-refresh"> Keep updated</label>
+</div>
+<div id="items" class="items">
+</div>
+<details class="advanced">
+<summary>Manage saved data</summary>
+<div class="btn-row">
+<span id="bulk-actions" style="display:none">
+<button class="ghost danger" onclick="bulkDelete()">Delete selected (<span id="sel-count">0</span>)</button>
+</span>
+<button class="ghost danger" onclick="clearScope()">Clear this view</button>
+</div>
+</details>
+</section>
+</div>
+</section>
+<section class="tab-pane" id="pane-compose" aria-label="Try a test">
+<div class="page-heading">
+<h2>Try it and see.</h2>
+<p>Choose an example to see how the server responds. You can adjust the details when you need to.</p>
+</div>
+<div class="lab-grid">
+<section class="card">
+<h2>Choose a test</h2>
+<label for="scenarios">What would you like to try?</label>
+<select id="scenarios" onchange="loadScenario(Number(this.value))">
+</select>
+<p class="hint" id="scenario-hint">A sample is ready. Press Run test to try it.</p>
+<details class="advanced">
+<summary>Customize this request</summary>
+<div class="compose-grid">
+<label for="c-method">Method</label>
+<select id="c-method">
+<option>GET</option>
+<option>POST</option>
+<option>PUT</option>
+<option>DELETE</option>
+<option>PATCH</option>
+<option>HEAD</option>
+<option>OPTIONS</option>
+</select>
+<label for="c-path">Path</label>
+<input id="c-path" value="/lab/echo?tag=one&amp;tag=two">
+<label for="c-body">Request body (optional)</label><textarea id="c-body"></textarea><label for="c-headers">Headers (JSON object)</label><textarea id="c-headers">{}</textarea><label for="c-timeout">Timeout in milliseconds</label>
+<input id="c-timeout" type="number" min="100" max="60000" value="15000">
+<label for="c-expected">Expected status (optional)</label>
+<input id="c-expected" type="number" min="200" max="599">
+<label class="toggle">
+<input id="c-secure" type="checkbox"> Use my access key</label>
+</div>
+</details>
+<div class="btn-row">
+<button id="c-send" class="primary" onclick="composeSend()">Run test</button>
+<button id="c-cancel" class="ghost" onclick="cancelCompose()" disabled>Cancel</button>
+</div>
+</section>
+<section class="card">
+<h2>What happened?</h2>
+<div id="compose-out" class="compose-out" role="status" aria-live="polite">
+<div class="empty">
+<strong>Your result will appear here.</strong>Run a test to get started.</div>
+</div>
+<div class="btn-row">
+<button class="ghost tiny" onclick="copyResponse()">Copy result</button>
+<button class="ghost tiny" onclick="composeHistory=[];renderHistory()">Clear recent tests</button>
+</div>
+<div id="compose-history" class="history-list">
+</div>
+</section>
+</div>
+</section>
+<section class="tab-pane" id="pane-uploads" aria-label="Files">
+<div class="page-heading">
+<h2>A place for your files.</h2>
+<p>Upload, find, and download files. Your files are private and need an access key.</p>
+</div>
+<div class="grid">
+<section class="card">
+<h2>Add a file</h2>
+<p class="hint">Choose a file up to 10 MB. It will be stored privately.</p>
+<input id="upload-api-key" type="hidden">
+<label for="upload-file">Choose a file</label>
+<input id="upload-file" type="file">
+<div class="btn-row">
+<button id="upload-send" class="primary" onclick="uploadFile()">Upload file</button>
+</div>
+<p id="upload-status" class="hint" role="status" aria-live="polite">Use Access key at the top to unlock file storage.</p>
+</section>
+<section class="card">
+<div class="list-header">
+<h2>Your files</h2>
+<button class="ghost tiny" onclick="refreshUploads()">Refresh files</button>
+</div>
+<div id="upload-list" class="items">
+<div class="empty">
+<strong>Your files will appear here.</strong>Add your access key, then refresh to see them.</div>
+</div>
+<div class="btn-row">
+<button id="upload-more" class="ghost" onclick="refreshUploads(true)" disabled>Show more</button>
+</div>
+</section>
+</div>
+</section>
+</main>
+<details class="server-details">
+<summary>Server activity</summary>
 <div class="stats" id="stats-bar">
-  <div class="stat hero">
-    <div class="label">Requests</div>
-    <div class="value" id="s-total">0</div>
-  </div>
-  <div class="stat">
-    <div class="label">Items</div>
-    <div class="value" id="s-items">0</div>
-    <div class="sub-mini" id="s-items-breakdown"></div>
-  </div>
-  <div class="stat">
-    <div class="label">Avg latency</div>
-    <div class="value" id="s-latency">—</div>
-    <div class="sub-mini" id="s-latency-detail"></div>
-  </div>
-  <div class="stat">
-    <div class="label">Uptime</div>
-    <div class="value" id="s-uptime">0s</div>
-  </div>
+<div class="stat">
+<div class="label">Requests</div>
+<div class="value" id="s-total">0</div>
+</div>
+<div class="stat">
+<div class="label">Saved items</div>
+<div class="value" id="s-items">0</div>
+<div id="s-items-breakdown" class="sub-mini">
+</div>
+</div>
+<div class="stat">
+<div class="label">Average response time</div>
+<div class="value" id="s-latency">—</div>
+<div id="s-latency-detail" class="sub-mini">
+</div>
+</div>
+<div class="stat">
+<div class="label">Running for</div>
+<div class="value" id="s-uptime">0s</div>
+</div>
 </div>
 <div class="stats-meta">
-  <span><span class="stats-meta-k">DB</span> <span id="s-dbsize">—</span></span>
-  <span><span class="stats-meta-k">Last</span> <span id="s-last">—</span></span>
-  <span id="s-methods"></span>
-  <span id="s-statuses"></span>
+<span>Storage <span id="s-dbsize">—</span>
+</span>
+<span>Last request <span id="s-last">—</span>
+</span>
+<span id="s-methods">
+</span>
+<span id="s-statuses">
+</span>
 </div>
-
-<!-- Tabs -->
-<div class="tabs">
-  <button class="tab active" data-tab="test">Payload storage</button>
-  <button class="tab" data-tab="compose">HTTP test lab</button>
-  <button class="tab" data-tab="uploads">File uploads</button>
-  <span style="margin-left:auto;align-self:center;color:var(--muted);font-size:11px">
-    <kbd>Ctrl</kbd>+<kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> search · <kbd>R</kbd> refresh
-  </span>
+</details>
+<footer class="footer">
+<span>Small Server · a little space to try things</span>
+<a href="/docs">Help &amp; docs</a>
+</footer>
 </div>
-
-<!-- TEST TAB -->
-<div class="tab-pane active" id="pane-test">
-  <div class="grid">
-    <!-- Public create -->
-    <div class="card">
-      <h2>Send Payload <span class="badge public">public</span></h2>
-      <div class="hint">Paste any valid JSON. Objects, arrays, nested — whatever your webhook sends.</div>
-      <input id="p-raw" aria-label="Public plain string payload" placeholder="or type a plain string here" />
-      <label for="p-json">JSON payload</label>
-      <textarea id="p-json" placeholder='{
-  "event": "user.signup",
-  "user": { "id": 42, "email": "a@b.com" },
-  "tags": ["new", "trial"]
-}'></textarea>
-      <div class="btn-row">
-        <button onclick="createPublic()">POST /public/items</button>
-        <button class="ghost" onclick="fillSample('p-json')">sample</button>
-        <button class="ghost" onclick="clearInput('p-json','p-raw')">clear</button>
-      </div>
-    </div>
-
-    <!-- Secure create -->
-    <div class="card">
-      <h2>Send Payload <span class="badge secure">secure</span></h2>
-      <div class="hint">Stored under a protected scope — requires your API key.</div>
-      <label for="api-key">API Key</label>
-      <input id="api-key" type="password" autocomplete="off" placeholder="secret-key-123" />
-      <input id="s-raw" aria-label="Secure plain string payload" placeholder="or type a plain string here" style="margin-top:8px" />
-      <label for="s-json">JSON payload</label>
-      <textarea id="s-json" placeholder='{
-  "secret": "data",
-  "numbers": [1, 2, 3]
-}'></textarea>
-      <div class="btn-row">
-        <button class="secure-btn" onclick="createSecure()">POST /secure/items</button>
-        <button class="ghost" onclick="fillSample('s-json')">sample</button>
-        <button class="ghost" onclick="clearInput('s-json','s-raw')">clear</button>
-      </div>
-    </div>
-
-    <!-- Items list -->
-    <div class="card list-wrap">
-      <div class="list-header">
-        <h2 style="margin:0">Stored Items <span id="item-count" class="item-id"></span></h2>
-        <div class="toolbar">
-          <input type="search" id="search" placeholder="filter payloads… (Ctrl+K)" />
-          <div class="filter-bar">
-            <button class="active" data-scope="all" onclick="setFilter('all')">All</button>
-            <button data-scope="public" onclick="setFilter('public')">Public</button>
-            <button data-scope="secure" onclick="setFilter('secure')">Secure</button>
-          </div>
-          <label class="toggle"><input type="checkbox" id="auto-refresh" /> auto</label>
-          <button class="ghost" onclick="refresh()" title="Refresh (R)">↻</button>
-          <span id="bulk-actions" style="display:none">
-            <button class="ghost tiny danger" onclick="bulkDelete()" style="color:var(--danger);border-color:var(--danger)">Delete selected (<span id="sel-count">0</span>)</button>
-          </span>
-          <button class="ghost danger" onclick="clearScope()" style="color:var(--danger);border-color:var(--danger)">Clear</button>
-        </div>
-      </div>
-      <div id="items" class="items"></div>
-    </div>
-  </div>
+<div id="toast" class="toast" role="status" aria-live="polite">
 </div>
-
-<!-- COMPOSE TAB -->
-<div class="tab-pane" id="pane-compose">
-  <h2>Explore HTTP behavior</h2>
-  <p class="hint">Choose a scenario, adjust the request, then send. Lab endpoints do not write to your database.</p>
-  <div id="scenarios" class="scenario-grid"></div>
-  <div class="lab-grid">
-  <div class="card">
-    <h2>Compose Request</h2>
-    <div class="hint">Fire any method at any path on this server. Useful for manual PUT / DELETE / GET-one testing. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to send.</div>
-    <div class="compose-grid">
-      <label for="c-method" style="margin:0">Method</label>
-      <select id="c-method">
-        <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option><option>HEAD</option><option>OPTIONS</option>
-      </select>
-      <label for="c-path" style="margin:0">Path</label>
-      <input id="c-path" value="/public/items" placeholder="/public/items/1" />
-      <label for="c-headers" style="margin:0">Headers (JSON object)</label>
-      <textarea id="c-headers" style="min-height:70px" placeholder='{"X-Test-Id":"demo"}'>{}</textarea>
-      <label for="c-body" style="margin:0">Body (raw, optional)</label>
-      <textarea id="c-body" placeholder='{ "key": "value" }' style="min-height:90px"></textarea>
-      <label for="c-timeout" style="margin:0">Timeout (ms)</label>
-      <input id="c-timeout" type="number" min="100" max="60000" value="15000" />
-      <label for="c-expected" style="margin:0">Expected status</label>
-      <input id="c-expected" type="number" min="200" max="599" placeholder="Optional, e.g. 429" />
-    </div>
-    <div class="btn-row">
-      <button id="c-send" onclick="composeSend()">Send request</button>
-      <button id="c-cancel" class="ghost" onclick="cancelCompose()" disabled>Cancel</button>
-      <button class="ghost" onclick="document.getElementById('c-body').value=''">Clear body</button>
-      <label class="toggle" style="margin-left:auto"><input type="checkbox" id="c-secure" /> send X-API-Key</label>
-    </div>
-    <p class="hint">GET / HEAD omit the body. JSON is sent as typed, including malformed JSON. Redirects follow automatically. API keys stay in memory.</p>
-  </div>
-  <div class="card">
-    <h2>Response inspector</h2>
-    <div id="compose-out" class="compose-out" role="status" aria-live="polite">Send a request to inspect status, timing, body size, and response headers.</div>
-    <div class="btn-row"><button class="ghost" onclick="copyResponse()">Copy response</button><button class="ghost" onclick="composeHistory=[];renderHistory()">Clear history</button></div>
-    <div id="compose-history" class="history-list"></div>
-  </div>
-  </div>
-</div>
-
-<div class="tab-pane" id="pane-uploads">
-  <div class="grid">
-    <div class="card">
-      <h2>Private file storage <span class="badge secure">R2</span></h2>
-      <p class="hint">Upload a file to your private Cloudflare R2 bucket. Maximum 10 MiB. Downloads require the same API key.</p>
-      <label for="upload-api-key">API key</label>
-      <input id="upload-api-key" type="password" autocomplete="off" placeholder="Your server API key" />
-      <label for="upload-file">File</label>
-      <input id="upload-file" type="file" />
-      <p class="hint">Filenames are normalized to letters, digits, dots, underscores, and hyphens. Keys stay in memory.</p>
-      <div class="btn-row"><button id="upload-send" onclick="uploadFile()">Upload file</button><button class="ghost" onclick="refreshUploads()">Check connection &amp; list</button></div>
-      <p id="upload-status" class="hint" role="status" aria-live="polite">Enter your API key to check whether R2 is configured.</p>
-    </div>
-    <div class="card">
-      <h2>Stored files</h2>
-      <p class="hint">Your app's uploads only. Select Download to save a file through the authenticated API.</p>
-      <div id="upload-list" class="items"><p class="empty">No files loaded yet.</p></div>
-      <div class="btn-row"><button id="upload-more" class="ghost" onclick="refreshUploads(true)" disabled>Load next page</button></div>
-    </div>
-  </div>
-</div>
-
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ════════════════════════════════════════════════════════════════════════════
@@ -543,7 +801,10 @@ function toast(msg, type = 'ok') {
 
 /* ── Tabs ── */
 function activateTab(name) {
-  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === name));
+  document.querySelectorAll('.tab').forEach(x => {
+    x.classList.toggle('active', x.dataset.tab === name);
+    x.setAttribute('aria-pressed', String(x.dataset.tab === name));
+  });
   document.querySelectorAll('.tab-pane').forEach(x => x.classList.toggle('active', x.id === 'pane-' + name));
 }
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => { activateTab(t.dataset.tab); savePrefs(); });
@@ -634,24 +895,56 @@ async function createPublic() {
   try {
     await api('POST', '/public/items', { body: payload });
     clearInput('p-json', 'p-raw');
-    toast('Stored ✓', 'ok');
+    toast('Saved.', 'ok');
     await refresh();
     savePrefs();
+    return true;
   } catch (e) { toast(e.message, 'error'); }
 }
 
 async function createSecure() {
   const key = API_KEY_INPUT();
   const { payload, error } = buildPayload('s-json', 's-raw');
-  if (!key) return toast('API key is required', 'error');
+  if (!key) return toast('Add your access key at the top to save private data.', 'error');
   if (error) return toast(error, 'error');
   try {
     await api('POST', '/secure/items', { headers: { 'X-API-Key': key }, body: payload });
     clearInput('s-json', 's-raw');
-    toast('Stored ✓', 'ok');
+    toast('Saved.', 'ok');
     await refresh();
     savePrefs();
+    return true;
   } catch (e) { toast(e.message, 'error'); }
+}
+
+async function saveData() {
+  const button = document.getElementById('save-data');
+  if (button.disabled) return;
+  button.disabled = true;
+  button.textContent = 'Saving…';
+  try {
+    if (document.getElementById('save-scope').value === 'secure') {
+      document.getElementById('s-raw').value = document.getElementById('p-raw').value;
+      document.getElementById('s-json').value = document.getElementById('p-json').value;
+      if (await createSecure()) clearInput('p-json', 'p-raw');
+    } else {
+      await createPublic();
+    }
+  } finally { button.disabled = false; button.textContent = 'Save data'; }
+}
+
+async function applyAccessKey() {
+  const status = document.getElementById('access-status');
+  if (!API_KEY_INPUT()) { status.textContent = 'Paste your access key first.'; return; }
+  status.textContent = 'Checking your key…';
+  try {
+    await api('GET', '/secure/items', {headers:{'X-API-Key':API_KEY_INPUT()}});
+    status.textContent = 'Private actions are unlocked.';
+    document.getElementById('access-settings').open = false;
+    toast('Private actions unlocked.');
+    await refresh();
+    if (document.querySelector('.tab.active')?.dataset.tab === 'uploads') await refreshUploads();
+  } catch { status.textContent = 'That key did not work. Check it and try again.'; }
 }
 
 /* ── Item rendering ── */
@@ -684,7 +977,7 @@ function renderItems() {
 
   if (!list.length) {
     container.innerHTML = '<div class="empty">' +
-      (q ? 'No items match your filter.' : 'No items yet. Send a payload above. ☝️') + '</div>';
+      (q ? 'Nothing matches your search.' : '<strong>Nothing saved yet.</strong>Your messages and data will appear here.') + '</div>';
     updateBulkUi();
     return;
   }
@@ -696,20 +989,19 @@ function renderItems() {
     return `
     <div class="item${selCls}${flashCls}" id="item-${it.id}">
       <div class="item-head">
-        <label class="row-check"><input type="checkbox" ${checked} onchange="toggleSelect(${it.id}, this.checked)" /></label>
-        <span class="badge ${it.scope}">${it.scope}</span>
+        <label class="row-check"><input type="checkbox" aria-label="Select saved item ${it.id}" ${checked} onchange="toggleSelect(${it.id}, this.checked)" /></label>
+        <span class="badge ${it.scope}">${it.scope === 'secure' ? 'Private' : 'Public'}</span>
         <span class="item-id">#${it.id}</span>
         <span class="badge type">${payloadType(it.payload)}</span>
         <span class="item-date" title="${it.created_at}">${relativeTime(it.created_at)}</span>
-        <div class="item-actions">
-          <button class="ghost tiny" onclick="copyPayload(${it.id})" title="copy JSON">copy</button>
-          <button class="ghost tiny" onclick="copyCurl(${it.id})" title="copy as curl">cURL</button>
-          <button class="ghost tiny" onclick="copyFetch(${it.id})" title="copy as fetch()">fetch</button>
-          <button class="ghost tiny" onclick="editItem(${it.id})">edit</button>
-          <button class="ghost tiny danger" style="color:var(--danger)" onclick="deleteItem(${it.id})">delete</button>
-        </div>
       </div>
       <div class="item-payload" id="payload-${it.id}">${renderPayloadHtml(it.payload)}</div>
+      <div class="item-actions">
+        <button class="ghost tiny" onclick="copyPayload(${it.id})">Copy</button>
+        <button class="ghost tiny" onclick="editItem(${it.id})">Edit</button>
+        <button class="ghost tiny danger" onclick="deleteItem(${it.id})">Delete</button>
+      </div>
+      <details class="advanced"><summary>Developer shortcuts</summary><div class="btn-row"><button class="ghost tiny" onclick="copyCurl(${it.id})">Copy cURL</button><button class="ghost tiny" onclick="copyFetch(${it.id})">Copy fetch</button></div></details>
     </div>`;
   }).join('');
   // Mark everything currently rendered as seen (after the flash class has applied).
@@ -783,10 +1075,11 @@ async function editItem(id) {
   if (box.dataset.editing === '1') {
     // save
     const raw = box.textContent.trim();
-    try { JSON.parse(raw); } catch (e) { return toast('Invalid JSON: ' + e.message, 'error'); }
+    let payload;
+    try { payload = typeof it.payload === 'string' ? raw : JSON.parse(raw); } catch (e) { return toast('Invalid JSON: ' + e.message, 'error'); }
     const headers = it.scope === 'secure' ? { 'X-API-Key': API_KEY_INPUT() } : {};
     try {
-      await api('PUT', `/${it.scope}/items/${id}`, { headers, body: raw });
+      await api('PUT', `/${it.scope}/items/${id}`, { headers, body: payload });
       toast(`Updated #${id}`, 'ok');
       await refresh();
     } catch (e) { toast(e.message, 'error'); }
@@ -809,8 +1102,8 @@ async function copyPayload(id) {
   const it = allItems.find(x => x.id === id);
   if (!it) return;
   try {
-    await navigator.clipboard.writeText(JSON.stringify(it.payload, null, 2));
-    toast('Payload copied ✓', 'ok');
+    await navigator.clipboard.writeText(typeof it.payload === 'string' ? it.payload : JSON.stringify(it.payload, null, 2));
+    toast('Copied.', 'ok');
   } catch { toast('Copy failed', 'error'); }
 }
 
@@ -907,11 +1200,16 @@ const scenarios = [
   {name:'Missing route', hint:'Check unknown paths return 404', path:'/does-not-exist', expected:404},
   {name:'CORS preflight', hint:'Inspect allowed methods and headers', method:'OPTIONS', path:'/lab/echo', expected:204},
 ];
+const sampleNames = ['See what you sent','Too many requests','A server error','A slow response','A request that times out','A redirect','A cached response','An empty response','Invalid data','A missing access key','A missing page','Browser permissions'];
+const sampleHints = ['Send a sample message and see it come back.','See the response when a client is asked to slow down.','Try a response that represents a server problem.','Wait two seconds before the server responds.','Stop waiting after half a second.','Follow a request to another page on this server.','Try a request for data that has not changed.','Try a successful response with nothing in its body.','See what happens when a message is not valid JSON.','Try opening private data without an access key.','Ask for a page that does not exist.','Check whether a browser can send requests to this server.'];
 document.getElementById('scenarios').innerHTML = scenarios.map((s, i) =>
-  `<button class="ghost" onclick="loadScenario(${i})">${escapeHtml(s.name)}<small>${escapeHtml(s.hint)}</small></button>`).join('');
+  `<option value="${i}">${sampleNames[i]}</option>`).join('');
 
 function loadScenario(i) {
   const s = scenarios[i];
+  if (!s) return;
+  document.getElementById('scenarios').value = String(i);
+  document.getElementById('scenario-hint').textContent = sampleHints[i];
   document.getElementById('c-method').value = s.method || 'GET';
   document.getElementById('c-path').value = s.path;
   document.getElementById('c-body').value = s.body || '';
@@ -919,8 +1217,6 @@ function loadScenario(i) {
   document.getElementById('c-timeout').value = s.timeout || 15000;
   document.getElementById('c-expected').value = s.expected || '';
   document.getElementById('c-secure').checked = false;
-  document.getElementById('c-path').focus();
-  toast('Scenario loaded. Send when ready.');
 }
 
 let composeController = null;
@@ -995,11 +1291,12 @@ function renderComposeOut({method,path,status,text,errMsg,ms,responseHeaders,exp
     (redirected ? `Redirected to ${finalURL}\n` : '') +
     `\n${pretty}\n\nResponse headers\n${JSON.stringify(responseHeaders, null, 2)}` + (errMsg ? `\n\n${errMsg}` : '');
   const out = document.getElementById('compose-out');
-  out.innerHTML = `<span class="status-pill s${status ? String(status)[0] : '5'}">${status || 'ERR'}</span>` + escapeHtml(lastResponse.slice(String(status || 'ERR').length));
+  const title = errMsg ? 'The request did not finish.' : expected ? (status === Number(expected) ? 'The test passed.' : 'The response was different than expected.') : status >= 400 ? 'The server returned an error.' : 'Your response is ready.';
+  out.innerHTML = `<div class="result-title">${escapeHtml(title)}</div><p class="hint">${escapeHtml(errMsg || (expected ? `The server ${status === Number(expected) ? 'responded as expected' : 'returned status ' + status}.` : 'Open the response below to see what came back.'))}</p><details class="advanced"><summary>View response</summary><pre>${highlightJson(pretty)}</pre></details><details class="advanced"><summary>Technical details</summary><pre>${escapeHtml(lastResponse)}</pre></details>`;
 }
 
 async function copyResponse() {
-  if (!lastResponse) return toast('Send a request first.', 'warn');
+  if (!lastResponse) return toast('Run a test first.', 'warn');
   try { await navigator.clipboard.writeText(lastResponse); toast('Response copied.'); }
   catch { toast('Clipboard unavailable. Select and copy the response text.', 'error'); }
 }
@@ -1011,8 +1308,11 @@ function pushHistory(entry) {
 }
 function renderHistory() {
   const el = document.getElementById('compose-history');
-  el.innerHTML = '<div class="hint">Recent requests · kept only for this page session · select to load</div>' + composeHistory.map((h, i) =>
-    `<button class="history-item ghost" onclick="replayHistory(${i})"><span class="h-method">${escapeHtml(h.method)}</span><span class="h-path">${escapeHtml(h.path)}</span><span class="h-status">${escapeHtml(h.status)} · ${h.ms}ms</span></button>`).join('');
+  el.innerHTML = '<div class="hint">Recent tests · select one to try it again</div>' + composeHistory.map((h, i) => {
+    const sample = scenarios.findIndex(s => s.path === h.path && (s.method || 'GET') === h.method);
+    const result = h.status === 'ERR' ? 'Interrupted' : h.expected ? (Number(h.status) === Number(h.expected) ? 'Passed' : 'Different response') : 'Completed';
+    return `<button class="history-item" onclick="replayHistory(${i})"><span class="h-path">${escapeHtml(sample >= 0 ? sampleNames[sample] : 'Custom request')}</span><span class="h-status">${result}</span></button>`;
+  }).join('');
 }
 function replayHistory(i) {
   const h = composeHistory[i];
@@ -1024,7 +1324,7 @@ function replayHistory(i) {
   document.getElementById('c-timeout').value = h.timeout;
   document.getElementById('c-expected').value = h.expected;
   document.getElementById('c-secure').checked = !!h.secure;
-  toast('Loaded — press Send', 'ok');
+  toast('Test loaded. Press Run test.', 'ok');
 }
 
 /* ── R2 files ── */
@@ -1035,7 +1335,7 @@ const uploadKey = () => document.getElementById('upload-api-key').value.trim() |
 
 async function uploadRequest(path, options = {}) {
   const key = uploadKey();
-  if (!key) throw new Error('Enter your server API key first.');
+  if (!key) throw new Error('Use Access key at the top to unlock files.');
   const res = await fetch(path, {...options, headers:{...options.headers, 'X-API-Key':key}, cache:'no-store', signal:AbortSignal.timeout(45000)});
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
@@ -1068,19 +1368,19 @@ async function uploadFile() {
 async function refreshUploads(next = false) {
   try {
     const status = await (await uploadRequest('/secure/uploads/status')).json();
-    if (!status.configured) throw new Error('R2 is not configured. Add the four R2 environment variables and restart the server.');
+    if (!status.configured) throw new Error('File storage is not connected yet. Ask the server owner to finish setup.');
     const page = await (await uploadRequest('/secure/uploads' + (next && uploadCursor ? '?cursor=' + encodeURIComponent(uploadCursor) : ''))).json();
     uploadedFiles = next ? [...uploadedFiles,...page.files] : page.files;
     uploadCursor = page.next_cursor || '';
     document.getElementById('upload-more').disabled = !uploadCursor;
-    document.getElementById('upload-status').textContent = `R2 connected · ${uploadedFiles.length} file(s) loaded`;
+    document.getElementById('upload-status').textContent = `File storage ready · ${uploadedFiles.length} file(s)`;
     renderUploads();
   } catch (e) { document.getElementById('upload-status').textContent = e.message; toast(e.message, 'error'); }
 }
 
 function renderUploads() {
   const el = document.getElementById('upload-list');
-  el.innerHTML = uploadedFiles.length ? uploadedFiles.map((f,i) => `<div class="item"><div class="item-head"><span class="item-id">${escapeHtml(f.key.slice(33))}</span><span class="item-date">${fmtBytes(f.size)}</span></div><div class="hint">${escapeHtml(f.key)}</div><div class="btn-row"><button class="ghost" onclick="downloadUpload(${i})">Download</button><button class="ghost" onclick="deleteUpload(${i})">Delete</button></div></div>`).join('') : '<p class="empty">No uploaded files yet.</p>';
+  el.innerHTML = uploadedFiles.length ? uploadedFiles.map((f,i) => `<div class="item"><div class="item-head"><strong>${escapeHtml(f.key.slice(33))}</strong><span class="item-date">${fmtBytes(f.size)}</span></div><div class="btn-row"><button class="ghost tiny" onclick="downloadUpload(${i})">Download</button><button class="ghost tiny danger" onclick="deleteUpload(${i})">Delete</button></div><details class="advanced"><summary>File details</summary><p class="item-id">${escapeHtml(f.key)}</p></details></div>`).join('') : '<div class="empty"><strong>No files yet.</strong>Upload your first file to see it here.</div>';
 }
 
 async function downloadUpload(i) {
@@ -1116,7 +1416,7 @@ document.addEventListener('keydown', (e) => {
     if (tab === 'compose') composeSend();
     else if (tab === 'test') {
       // submit the focused-or-last-used scope; default to public
-      (document.activeElement?.closest('.card')?.querySelector('#s-json') ? createSecure() : createPublic());
+      saveData();
     }
     return;
   }
@@ -1147,6 +1447,7 @@ document.getElementById('search').addEventListener('keydown', (e) => {
 
 /* ── Init ── */
 loadPrefs();
+loadScenario(0);
 refresh();
 setInterval(refreshStats, 5000);
 </script>

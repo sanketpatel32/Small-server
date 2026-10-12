@@ -130,7 +130,7 @@ test('upload form normalizes filenames and sends raw bytes with an API key', asy
   assert.equal(requests[0].options.body,file);
   assert.equal(requests[0].options.headers['X-API-Key'],'test-key');
   assert.equal(ui.get('upload-send').disabled,false);
-  assert.match(ui.get('upload-status').textContent,/R2 connected/);
+  assert.match(ui.get('upload-status').textContent,/File storage ready/);
 });
 
 test('empty or oversized uploads do not send and unconfigured R2 gives clear feedback', async () => {
@@ -143,5 +143,58 @@ test('empty or oversized uploads do not send and unconfigured R2 gives clear fee
   assert.equal(calls,0);
   ui.get('upload-api-key').value = 'test-key';
   await ui.run('refreshUploads()');
-  assert.match(ui.get('upload-status').textContent,/R2 is not configured/);
+  assert.match(ui.get('upload-status').textContent,/File storage is not connected/);
+});
+
+test('one save form preserves public/private routing and sends the selected value', async () => {
+  const sent = [];
+  const ui = consoleUI(async (path, options) => {
+    sent.push({path,options});
+    return Response.json({id:1},{status:201});
+  });
+  ui.get('save-scope').value = 'public';
+  ui.get('p-raw').value = 'An ordinary message';
+  await ui.run('saveData()');
+  assert.equal(sent[0].path,'/public/items');
+  assert.equal(sent[0].options.body,'"An ordinary message"');
+  ui.get('save-scope').value = 'secure';
+  ui.get('api-key').value = 'test-key';
+  ui.get('p-json').value = '{"nested":{"ok":true}}';
+  await ui.run('saveData()');
+  assert.equal(sent[1].path,'/secure/items');
+  assert.equal(sent[1].options.headers['X-API-Key'],'test-key');
+  assert.equal(sent[1].options.body,'{"nested":{"ok":true}}');
+  assert.equal(ui.get('p-json').value,'');
+  assert.equal(ui.get('save-data').disabled,false);
+});
+
+test('private saves keep the message when a key is missing; failed keys give clear feedback', async () => {
+  const ui = consoleUI(async () => Response.json({detail:'Invalid key'},{status:401}));
+  ui.get('save-scope').value = 'secure';
+  ui.get('p-raw').value = 'Keep this message';
+  await ui.run('saveData()');
+  assert.equal(ui.get('p-raw').value,'Keep this message');
+  assert.equal(ui.get('save-data').disabled,false);
+  ui.get('api-key').value = 'wrong-key';
+  await ui.run('applyAccessKey()');
+  assert.match(ui.get('access-status').textContent,/did not work/);
+});
+
+test('editing keeps JSON types and ordinary messages instead of encoding everything as a string', async () => {
+  let sent;
+  const ui = consoleUI(async (_path, options) => { sent = options.body; return Response.json({id:1}); });
+  for (const [original, edited, expected] of [
+    [{value:1},'{"value":2}','{"value":2}'],
+    [false,'true','true'],
+    [1,'2','2'],
+    ['old message','new message','"new message"'],
+  ]) {
+    ui.run('allItems = [{id:1,scope:"public",payload:'+JSON.stringify(original)+'}]');
+    const box = ui.get('payload-1');
+    box.dataset = {editing:'1'};
+    box.textContent = edited;
+    box.closest = () => ({querySelector:() => ({textContent:''})});
+    await ui.run('editItem(1)');
+    assert.equal(sent,expected);
+  }
 });

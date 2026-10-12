@@ -133,7 +133,7 @@ The status endpoint accepts any code from 200 to 599 and returns `{"status":N,"m
 
 The delay endpoint accepts an integer from 0 to 10,000 milliseconds and returns `{"delay_ms":N,"status":"ok"}` after the wait. The wait is cancellable when the client disconnects. Redirects default to `/lab/echo` and status 302; use `to` for a local absolute path and `code` for 301, 302, 303, 307, or 308. External and protocol-relative destinations are rejected. The cache endpoint returns a fixed ETag (`"small-server-v1"`) and `Cache-Control: public, max-age=60`; matching `If-None-Match` (including `*`) returns 304.
 
-The UI includes lab scenario presets and custom requests with headers, raw bodies, timeouts, cancellation, status assertions, response headers, and request history. UI history is kept in the current browser session only.
+The workspace has three sections: **Save data** for messages or JSON, **Try a test** for ready-to-run examples, and **Files** for private uploads. Use **Access key** at the top once to unlock private actions. Advanced request settings, response headers, file keys, and server activity are available in expandable sections. Recent tests stay in memory only until the page is reloaded.
 
 > 🔒 Secure routes require header `X-API-Key: secret-key-123` (override via `API_KEY` env var).
 > 🔁 **Scope isolation:** an `id` only resolves within its own scope — `/public/items/5` won't return a secure item even if id 5 exists there.
