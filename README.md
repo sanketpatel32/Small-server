@@ -1,18 +1,27 @@
-# Small-Server
+<div align="center">
 
-A tiny, ultra-light REST API testing server. Built with **Go** (stdlib net/http) + **SQLite** (pure-Go driver, no CGO). Perfect for testing webhooks in Postman/Bruno, firing payloads from your AI agents, or just having a scratch API to develop against.
+# Small Server
 
-- ⚡ **Single static binary** — ~15MB, no runtime, no dependencies to install
-- 🐧 **Cross-platform** — builds for Linux/macOS/Windows from one codebase
-- 🗃️ **SQLite** file DB (no separate server, zero config)
-- 📦 **Full CRUD** — create, read (list + one), update, delete (one + clear-all)
-- 📦 **Accepts ANY JSON payload** — objects, arrays, nested structs, strings, numbers, booleans, even `null`
-- 🔐 **Public + API-key-secured routes** — same CRUD on both, scope-isolated
-- 🌐 **Built-in UI** — test everything at `http://localhost:8795/`
-- 🧪 **HTTP lab** — echo requests, simulate status codes, delays, redirects, and caching
-- 📖 **Embedded API docs** — open `/docs` for the API reference and test recipes
-- 🌍 **CORS open** — call it from any browser app (React/Vue/etc.)
-- 🔌 **Uncommon port 8795** — won't clash with your other dev servers
+**A tiny, single-binary REST API playground for webhooks, agents, and frontend development.**
+
+Go standard library · SQLite · OpenAPI 3.1 · Postman/Bruno · No CGO
+
+</div>
+
+Store and inspect any valid JSON payload through public or API-key-protected CRUD routes. Small Server includes a testing UI, persistent SQLite storage, an OpenAPI schema, and ready-to-run API collections.
+
+| | |
+|---|---|
+| **Setup** | One static binary with no runtime or database server |
+| **Payloads** | Objects, arrays, primitives, nested values, and `null` |
+| **Platforms** | Windows, macOS, and Linux |
+| **Interfaces** | Built-in browser UI, REST API, OpenAPI, Postman, and Bruno |
+| **HTTP testing** | Echo, status simulation, delays, redirects, caching, and a response inspector |
+| **Documentation** | Embedded API guide at `/docs` with test recipes |
+| **Deployment** | Docker and Fly.io configuration included |
+
+> [!IMPORTANT]
+> The default API key and open CORS configuration are intended for local testing. Set a strong `API_KEY` and restrict network access before deploying publicly.
 
 ---
 
