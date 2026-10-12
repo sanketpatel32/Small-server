@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Small-Server",
-    "version": "1.2.0",
-    "description": "A tiny REST API testing server — full CRUD on any JSON payload, SQLite-backed. Built with Go. Includes public HTTP lab endpoints for echo, status, delay, redirect, and cache testing."
+    "version": "1.3.0",
+    "description": "A tiny REST API testing server — full CRUD on any JSON payload, SQLite-backed. Built with Go. Includes public HTTP lab endpoints for echo, status, delay, redirect, and cache testing. Only /secure/* routes require X-API-Key authentication."
   },
   "components": {
     "securitySchemes": {
@@ -166,6 +166,94 @@
           "version": {
             "type": "integer",
             "const": 1
+          }
+        }
+      },
+      "UploadStatus": {
+        "type": "object",
+        "required": [
+          "configured",
+          "max_bytes"
+        ],
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "const": 10485760
+          }
+        }
+      },
+      "UploadFile": {
+        "type": "object",
+        "required": [
+          "key",
+          "size",
+          "etag",
+          "last_modified"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}-[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "etag": {
+            "type": "string"
+          },
+          "last_modified": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UploadList": {
+        "type": "object",
+        "required": [
+          "files",
+          "next_cursor"
+        ],
+        "properties": {
+          "files": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/UploadFile"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "UploadCreated": {
+        "type": "object",
+        "required": [
+          "key",
+          "filename",
+          "size",
+          "content_type",
+          "download_path"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "download_path": {
+            "type": "string",
+            "example": "/secure/uploads/0123456789abcdef0123456789abcdef-example.txt"
           }
         }
       }
@@ -1222,6 +1310,272 @@
             }
           }
         }
+      }
+    },
+    "/secure/uploads/status": {
+      "get": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Check R2 upload configuration",
+        "responses": {
+          "200": {
+            "description": "Configuration status; never returns credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/secure/uploads": {
+      "get": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "List uploaded files",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque pagination cursor, at most 2048 bytes.",
+            "schema": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "At most 100 files from the application uploads/ prefix",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "502": {
+            "description": "Storage request failed"
+          },
+          "503": {
+            "description": "R2 is not configured"
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Upload a file",
+        "description": "Send raw binary bytes (not multipart/form-data). Body must be nonempty and no larger than 10 MiB. The browser UI normalizes selected filenames to the allowed ASCII format; API callers must send a valid filename. Filename must begin with an ASCII letter or digit and contain only ASCII letters, digits, dot, underscore, or hyphen; maximum 128 characters. Object keys are generated as random 32 lowercase hex characters, a hyphen, then the filename.",
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Raw binary bytes. Do not use multipart/form-data.",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary",
+                "maxLength": 10485760
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File stored under the private uploads/ prefix",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty body or invalid filename"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "413": {
+            "description": "File exceeds 10 MiB"
+          },
+          "502": {
+            "description": "Storage request failed"
+          },
+          "503": {
+            "description": "R2 is not configured"
+          },
+          "429": {
+            "description": "Four uploads are already in progress",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "const": "1"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/secure/uploads/{key}": {
+      "parameters": [
+        {
+          "name": "key",
+          "in": "path",
+          "required": true,
+          "description": "Object key in the application uploads/ prefix: 32 lowercase hex characters, a hyphen, and a valid filename. Keys outside this format or prefix are inaccessible.",
+          "schema": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}-[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Download a file",
+        "responses": {
+          "200": {
+            "description": "File attachment",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid key"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "502": {
+            "description": "Storage request failed"
+          },
+          "503": {
+            "description": "R2 is not configured"
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      },
+      "head": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Inspect a file without downloading it",
+        "responses": {
+          "200": {
+            "description": "File metadata headers"
+          },
+          "400": {
+            "description": "Invalid key"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "404": {
+            "description": "File not found"
+          },
+          "502": {
+            "description": "Storage request failed"
+          },
+          "503": {
+            "description": "R2 is not configured"
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Delete a file",
+        "description": "Idempotent: deleting a missing file also succeeds.",
+        "responses": {
+          "204": {
+            "description": "Deleted or already absent"
+          },
+          "400": {
+            "description": "Invalid key"
+          },
+          "401": {
+            "description": "Missing or invalid API key"
+          },
+          "502": {
+            "description": "Storage request failed"
+          },
+          "503": {
+            "description": "R2 is not configured"
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ]
       }
     }
   }

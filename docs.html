@@ -8,12 +8,12 @@
 </style>
 </head>
 <body><main>
-<nav><a href="/">← Test console</a><a href="/openapi.json">OpenAPI schema</a><a href="#storage">Storage</a><a href="#lab">HTTP lab</a><a href="#recipes">Test recipes</a></nav>
+<nav><a href="/">← Test console</a><a href="/openapi.json">OpenAPI schema</a><a href="#storage">Storage</a><a href="#lab">HTTP lab</a><a href="#uploads">R2 uploads</a><a href="#recipes">Test recipes</a></nav>
 <h1>A sandbox for your HTTP clients.</h1>
 <p>Store webhook payloads, inspect what your client sends, and exercise error handling. Open the HTTP test lab in the console for ready-to-run scenarios and a response inspector.</p>
-<div class="note"><p>Public endpoints and telemetry are accessible without authentication. Secure storage requires <code>X-API-Key</code>. The default development key is <code>secret-key-123</code>; set <code>API_KEY</code> before sharing the server. Use synthetic test data.</p></div>
+<div class="note"><p>Only <code>/secure/*</code> endpoints require <code>X-API-Key</code>. Public CRUD, health, telemetry, the UI, docs, and HTTP lab routes do not require a key. Set a strong <code>API_KEY</code> before sharing the server. Use synthetic test data.</p></div>
 <section id="storage"><h2>Payload storage</h2>
-<p>Replace <code>{scope}</code> with <code>public</code> or <code>secure</code>. Item IDs only resolve in their own scope. Any valid JSON value is supported, including arrays, strings, numbers, booleans, and null. An empty request body stores null.</p>
+<p>Replace <code>{scope}</code> with <code>public</code> or <code>secure</code>. Only requests in the secure scope require the API key in <code>X-API-Key</code>. Item IDs only resolve in their own scope. Any valid JSON value is supported, including arrays, strings, numbers, booleans, and null. An empty request body stores null.</p>
 <div class="table-wrap"><table><thead><tr><th>Method</th><th>Path</th><th>Result</th></tr></thead><tbody>
 <tr><td>GET</td><td>/{scope}/items</td><td>200 · array, newest first</td></tr>
 <tr><td>POST</td><td>/{scope}/items</td><td>201 · stored item</td></tr>
@@ -34,6 +34,24 @@
 <tr><td><code>/lab/cache</code></td><td>Returns ETag: "small-server-v1" and Cache-Control: public, max-age=60. A matching If-None-Match (including weak tags or *) returns 304.</td></tr>
 </tbody></table></div>
 <p>Invalid status, delay, or redirect parameters return 400. <code>/health</code> reports availability; <code>/stats</code> reports request counters, latency, and item counts. Telemetry resets on restart and includes console polling.</p></section>
+<section id="uploads"><h2>Private Cloudflare R2 uploads</h2>
+<p>R2 is optional. Only <code>/secure/*</code> upload routes require <code>X-API-Key</code>. Create an R2 bucket and an API token with Object Read &amp; Write permission scoped to the bucket. Keep the bucket private: access is server-side, so a public bucket or bucket CORS configuration is not needed. Cloudflare shows the secret access key once; save the ID and secret in the ignored local <code>.env.r2</code> file. See <a href="https://developers.cloudflare.com/r2/api/tokens/">Cloudflare token setup</a>.</p>
+<pre>R2_ENDPOINT=https://&lt;account-id&gt;.r2.cloudflarestorage.com
+R2_BUCKET=your-bucket-name
+R2_ACCESS_KEY_ID=your-access-key-id
+R2_SECRET_ACCESS_KEY=your-secret-access-key</pre>
+<p>For jurisdictional buckets, use the matching endpoint, for example <code>https://&lt;account-id&gt;.eu.r2.cloudflarestorage.com</code>, <code>https://&lt;account-id&gt;.us.r2.cloudflarestorage.com</code>, or <code>https://&lt;account-id&gt;.fedramp.r2.cloudflarestorage.com</code>. Locally load <code>.env.r2</code> before starting the server. On Fly, import <code>.env.fly</code> and <code>.env.r2</code> from the repository root with <code>fly secrets import &lt; .env.fly</code> and <code>fly secrets import &lt; .env.r2</code>, then deploy with <code>fly deploy -a small-server</code>.</p>
+<p>Filename must start with an ASCII letter or digit and may then contain only ASCII letters, digits, dot, underscore, or hyphen (maximum 128 characters). The browser UI normalizes selected filenames to this allowed format; API callers must send a valid name. The app generates a random 32-character lowercase hex prefix plus a hyphen. Listing cursors are opaque and limited to 2048 bytes. Files outside the app's <code>uploads/</code> prefix cannot be accessed. At most four uploads can run concurrently; an extra upload returns 429 with <code>Retry-After: 1</code>. R2 unconfigured returns 503, bad inputs 400, oversized uploads 413, missing downloads 404, and S3 failures a generic 502.</p>
+<pre>curl -X POST 'https://small-server.fly.dev/secure/uploads?filename=example.txt' \
+  -H 'X-API-Key: YOUR-API-KEY' -H 'Content-Type: application/octet-stream' \
+  --data-binary @example.txt
+
+curl 'https://small-server.fly.dev/secure/uploads' -H 'X-API-Key: YOUR-API-KEY'
+curl -OJ 'https://small-server.fly.dev/secure/uploads/0123456789abcdef0123456789abcdef-example.txt' \
+  -H 'X-API-Key: YOUR-API-KEY'
+curl -X DELETE 'https://small-server.fly.dev/secure/uploads/0123456789abcdef0123456789abcdef-example.txt' \
+  -H 'X-API-Key: YOUR-API-KEY'</pre>
+<p>R2 Standard currently includes 10 GB-month of storage, 1 million Class A operations, and 10 million Class B operations each month. Additional R2 usage is billed by Cloudflare separately from Fly. Check <a href="https://developers.cloudflare.com/r2/pricing/">current R2 pricing</a>.</p></section>
 <section id="recipes"><h2>Try these test recipes</h2>
 <pre>curl -X POST 'http://localhost:8795/lab/echo?tag=one&amp;tag=two' \
   -H "Content-Type: application/json" -H "X-Test-Id: demo" \
@@ -43,7 +61,7 @@ curl -i http://localhost:8795/lab/status/429
 curl --max-time 1 http://localhost:8795/lab/delay/2000
 curl -i http://localhost:8795/lab/cache \
   -H 'If-None-Match: "small-server-v1"'
-curl -i http://localhost:8795/secure/items</pre>
+curl -i http://localhost:8795/secure/items -H "X-API-Key: YOUR-API-KEY"</pre>
 <p>In the console, load a scenario, set an expected status, and send. PASS/FAIL checks the final HTTP status only. For redirects, use curl without <code>-L</code> to inspect the initial Location header. Custom request headers use a JSON object of string values; the browser controls restricted headers such as Host and Cookie.</p>
 <p>History keeps the last 20 requests in memory and disappears on reload. Selecting a history entry loads it for review; press Send to execute. API keys are held in memory. Copy response exports the response currently shown.</p></section>
 <section><h2>Run and verify</h2><pre>go run .

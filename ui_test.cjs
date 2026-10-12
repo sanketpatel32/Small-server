@@ -18,7 +18,7 @@ function consoleUI(fetch) {
     localStorage: { getItem:()=>null, setItem() {} },
     location: { origin:'http://localhost:8795' },
     navigator: { clipboard: { writeText:async () => {} } },
-    Headers, URL, TextEncoder, AbortController, performance, fetch,
+    Headers, URL, TextEncoder, AbortController, AbortSignal, performance, fetch,
     setTimeout, clearTimeout, setInterval:()=>0, clearInterval() {},
   });
   let source = fs.readFileSync('index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
@@ -112,4 +112,36 @@ test('every JSON value, including null and _error objects, can be submitted', as
     assert.equal(body, value);
   }
   assert.equal(ui.run('relativeTime(new Date().toISOString())'), 'just now');
+});
+
+test('upload form normalizes filenames and sends raw bytes with an API key', async () => {
+  const requests = [];
+  const ui = consoleUI(async (path, options) => {
+    requests.push({path,options});
+    if (path.includes('filename=')) return Response.json({filename:'hello-world.txt',size:5});
+    if (path.endsWith('/status')) return Response.json({configured:true});
+    return Response.json({files:[],next_cursor:''});
+  });
+  const file = {name:'hello world.txt',size:5,type:'text/plain'};
+  ui.get('upload-file').files = [file];
+  ui.get('upload-api-key').value = 'test-key';
+  await ui.run('uploadFile()');
+  assert.equal(requests[0].path,'/secure/uploads?filename=hello-world.txt');
+  assert.equal(requests[0].options.body,file);
+  assert.equal(requests[0].options.headers['X-API-Key'],'test-key');
+  assert.equal(ui.get('upload-send').disabled,false);
+  assert.match(ui.get('upload-status').textContent,/R2 connected/);
+});
+
+test('empty or oversized uploads do not send and unconfigured R2 gives clear feedback', async () => {
+  let calls = 0;
+  const ui = consoleUI(async () => { calls++; return Response.json({configured:false}); });
+  for (const size of [0,10*1024*1024+1]) {
+    ui.get('upload-file').files = [{name:'file.txt',size}];
+    await ui.run('uploadFile()');
+  }
+  assert.equal(calls,0);
+  ui.get('upload-api-key').value = 'test-key';
+  await ui.run('refreshUploads()');
+  assert.match(ui.get('upload-status').textContent,/R2 is not configured/);
 });

@@ -581,6 +581,7 @@ func routes() http.Handler {
 	})
 	mux.HandleFunc("GET /{$}", handleUI)
 	registerLab(mux)
+	registerUploads(mux, objectStorage)
 
 	// /public/items          GET    list   | POST   create
 	// /public/items/{id}     GET    read   | PUT    update | DELETE remove

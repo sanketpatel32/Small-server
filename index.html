@@ -358,6 +358,7 @@
 <div class="tabs">
   <button class="tab active" data-tab="test">Payload storage</button>
   <button class="tab" data-tab="compose">HTTP test lab</button>
+  <button class="tab" data-tab="uploads">File uploads</button>
   <span style="margin-left:auto;align-self:center;color:var(--muted);font-size:11px">
     <kbd>Ctrl</kbd>+<kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> search · <kbd>R</kbd> refresh
   </span>
@@ -466,6 +467,28 @@
     <div class="btn-row"><button class="ghost" onclick="copyResponse()">Copy response</button><button class="ghost" onclick="composeHistory=[];renderHistory()">Clear history</button></div>
     <div id="compose-history" class="history-list"></div>
   </div>
+  </div>
+</div>
+
+<div class="tab-pane" id="pane-uploads">
+  <div class="grid">
+    <div class="card">
+      <h2>Private file storage <span class="badge secure">R2</span></h2>
+      <p class="hint">Upload a file to your private Cloudflare R2 bucket. Maximum 10 MiB. Downloads require the same API key.</p>
+      <label for="upload-api-key">API key</label>
+      <input id="upload-api-key" type="password" autocomplete="off" placeholder="Your server API key" />
+      <label for="upload-file">File</label>
+      <input id="upload-file" type="file" />
+      <p class="hint">Filenames are normalized to letters, digits, dots, underscores, and hyphens. Keys stay in memory.</p>
+      <div class="btn-row"><button id="upload-send" onclick="uploadFile()">Upload file</button><button class="ghost" onclick="refreshUploads()">Check connection &amp; list</button></div>
+      <p id="upload-status" class="hint" role="status" aria-live="polite">Enter your API key to check whether R2 is configured.</p>
+    </div>
+    <div class="card">
+      <h2>Stored files</h2>
+      <p class="hint">Your app's uploads only. Select Download to save a file through the authenticated API.</p>
+      <div id="upload-list" class="items"><p class="empty">No files loaded yet.</p></div>
+      <div class="btn-row"><button id="upload-more" class="ghost" onclick="refreshUploads(true)" disabled>Load next page</button></div>
+    </div>
   </div>
 </div>
 
@@ -1002,6 +1025,84 @@ function replayHistory(i) {
   document.getElementById('c-expected').value = h.expected;
   document.getElementById('c-secure').checked = !!h.secure;
   toast('Loaded — press Send', 'ok');
+}
+
+/* ── R2 files ── */
+let uploadCursor = '';
+let uploadedFiles = [];
+let uploadBusy = false;
+const uploadKey = () => document.getElementById('upload-api-key').value.trim() || API_KEY_INPUT();
+
+async function uploadRequest(path, options = {}) {
+  const key = uploadKey();
+  if (!key) throw new Error('Enter your server API key first.');
+  const res = await fetch(path, {...options, headers:{...options.headers, 'X-API-Key':key}, cache:'no-store', signal:AbortSignal.timeout(45000)});
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || `HTTP ${res.status}`);
+  }
+  return res;
+}
+
+async function uploadFile() {
+  if (uploadBusy) return;
+  const file = document.getElementById('upload-file').files[0];
+  if (!file) return toast('Select a file first.', 'warn');
+  if (!file.size || file.size > 10 * 1024 * 1024) return toast('Choose a nonempty file up to 10 MiB.', 'error');
+  const filename = file.name.replace(/[^A-Za-z0-9._-]/g, '-').replace(/^[^A-Za-z0-9]+/, '').slice(0,128) || 'upload.bin';
+  const button = document.getElementById('upload-send');
+  uploadBusy = true;
+  button.disabled = true;
+  document.getElementById('upload-status').textContent = 'Uploading…';
+  try {
+    const res = await uploadRequest('/secure/uploads?filename=' + encodeURIComponent(filename), {method:'POST', headers:{'Content-Type':file.type || 'application/octet-stream'}, body:file});
+    const data = await res.json();
+    document.getElementById('upload-status').textContent = `Uploaded ${data.filename} · ${fmtBytes(data.size)}`;
+    document.getElementById('upload-file').value = '';
+    toast('File uploaded.');
+    await refreshUploads();
+  } catch (e) { document.getElementById('upload-status').textContent = e.message; toast(e.message, 'error'); }
+  finally { uploadBusy = false; button.disabled = false; }
+}
+
+async function refreshUploads(next = false) {
+  try {
+    const status = await (await uploadRequest('/secure/uploads/status')).json();
+    if (!status.configured) throw new Error('R2 is not configured. Add the four R2 environment variables and restart the server.');
+    const page = await (await uploadRequest('/secure/uploads' + (next && uploadCursor ? '?cursor=' + encodeURIComponent(uploadCursor) : ''))).json();
+    uploadedFiles = next ? [...uploadedFiles,...page.files] : page.files;
+    uploadCursor = page.next_cursor || '';
+    document.getElementById('upload-more').disabled = !uploadCursor;
+    document.getElementById('upload-status').textContent = `R2 connected · ${uploadedFiles.length} file(s) loaded`;
+    renderUploads();
+  } catch (e) { document.getElementById('upload-status').textContent = e.message; toast(e.message, 'error'); }
+}
+
+function renderUploads() {
+  const el = document.getElementById('upload-list');
+  el.innerHTML = uploadedFiles.length ? uploadedFiles.map((f,i) => `<div class="item"><div class="item-head"><span class="item-id">${escapeHtml(f.key.slice(33))}</span><span class="item-date">${fmtBytes(f.size)}</span></div><div class="hint">${escapeHtml(f.key)}</div><div class="btn-row"><button class="ghost" onclick="downloadUpload(${i})">Download</button><button class="ghost" onclick="deleteUpload(${i})">Delete</button></div></div>`).join('') : '<p class="empty">No uploaded files yet.</p>';
+}
+
+async function downloadUpload(i) {
+  const file = uploadedFiles[i];
+  if (!file) return;
+  try {
+    const blob = await (await uploadRequest('/secure/uploads/' + encodeURIComponent(file.key))).blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = file.key.slice(33); link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function deleteUpload(i) {
+  const file = uploadedFiles[i];
+  if (!file || !confirm('Permanently delete ' + file.key.slice(33) + '?')) return;
+  try {
+    await uploadRequest('/secure/uploads/' + encodeURIComponent(file.key), {method:'DELETE'});
+    toast('File deleted.');
+    await refreshUploads();
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 /* ── Keyboard shortcuts ── */

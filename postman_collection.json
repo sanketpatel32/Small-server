@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-small-server-0001-0000-000000000001",
     "name": "Small-Server",
-    "description": "A tiny REST API testing server (Go + SQLite) with CRUD and HTTP lab requests. Import and send requests against http://localhost:8795.",
+    "description": "Small-Server API collection. Only /secure/* routes require X-API-Key. Secure CRUD requests carry their own key header; the Uploads folder has folder-level auth.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -827,7 +827,7 @@
     },
     {
       "name": "Secure",
-      "description": "API-key-protected endpoints. Each request has the X-API-Key: secret-key-123 header hardcoded.",
+      "description": "API-key-protected endpoints. Each request includes X-API-Key: secret-key-123.",
       "item": [
         {
           "name": "List secure items",
@@ -866,7 +866,7 @@
                 "items"
               ]
             },
-            "description": "Return all secure items. Requires header X-API-Key: secret-key-123 (hardcoded on this request)."
+            "description": "Return all secure items. Requires header X-API-Key: secret-key-123."
           },
           "response": [
             {
@@ -930,7 +930,7 @@
                 "items"
               ]
             },
-            "description": "Store ANY valid JSON payload under the secure scope. Requires header X-API-Key: secret-key-123 (hardcoded on this request)."
+            "description": "Store ANY valid JSON payload under the secure scope. Requires header X-API-Key: secret-key-123."
           },
           "response": [
             {
@@ -1140,6 +1140,182 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Uploads (Cloudflare R2)",
+      "description": "R2 must be configured on the server; upload body is raw, not multipart. This folder uses its own API-key auth; edit the folder key to match API_KEY.",
+      "item": [
+        {
+          "name": "Configuration status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/secure/uploads/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "uploads",
+                "status"
+              ]
+            },
+            "description": "Check whether all R2 settings are present and read the 10 MiB upload limit. Credentials are never returned."
+          },
+          "response": []
+        },
+        {
+          "name": "List uploads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/secure/uploads",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "uploads"
+              ]
+            },
+            "description": "List up to 100 files in the application uploads/ prefix. Add cursor=<opaque> to the URL for another page."
+          },
+          "response": []
+        },
+        {
+          "name": "Upload raw file bytes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/octet-stream"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8795/secure/uploads?filename=example.txt",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "uploads"
+              ],
+              "query": [
+                {
+                  "key": "filename",
+                  "value": "example.txt"
+                }
+              ]
+            },
+            "description": "Send nonempty raw bytes (not multipart/form-data), at most 10 MiB. Replace the body with the file content.",
+            "body": {
+              "mode": "raw",
+              "raw": "Small-Server R2 upload example",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Download upload",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "uploads",
+                "0123456789abcdef0123456789abcdef-example.txt"
+              ]
+            },
+            "description": "Replace the sample object key with the key returned by Upload raw file bytes."
+          },
+          "response": []
+        },
+        {
+          "name": "Inspect upload headers",
+          "request": {
+            "method": "HEAD",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "uploads",
+                "0123456789abcdef0123456789abcdef-example.txt"
+              ]
+            },
+            "description": "Replace the sample object key with an uploaded file key."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete upload",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "secure",
+                "uploads",
+                "0123456789abcdef0123456789abcdef-example.txt"
+              ]
+            },
+            "description": "Idempotently delete the file (204). Replace the sample object key with an uploaded file key."
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "apikey",
+        "apikey": [
+          {
+            "key": "key",
+            "value": "X-API-Key",
+            "type": "string"
+          },
+          {
+            "key": "value",
+            "value": "secret-key-123",
+            "type": "string"
+          },
+          {
+            "key": "in",
+            "value": "header",
+            "type": "string"
+          }
+        ]
+      }
     }
   ]
 }

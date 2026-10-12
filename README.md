@@ -8,7 +8,7 @@ Go standard library · SQLite · OpenAPI 3.1 · Postman/Bruno · No CGO
 
 </div>
 
-Store and inspect any valid JSON payload through public or API-key-protected CRUD routes. Small Server includes a testing UI, persistent SQLite storage, an OpenAPI schema, and ready-to-run API collections.
+Store and inspect any valid JSON payload through public or secure CRUD routes. Only `/secure/*` endpoints require the configured API key; public CRUD, the HTTP lab, health, stats, UI, and docs routes remain public. Small Server includes a testing UI, persistent SQLite storage, an OpenAPI schema, ready-to-run API collections, and optional private Cloudflare R2 file storage.
 
 | | |
 |---|---|
@@ -21,7 +21,7 @@ Store and inspect any valid JSON payload through public or API-key-protected CRU
 | **Deployment** | Docker and Fly.io configuration included |
 
 > [!IMPORTANT]
-> The default API key and open CORS configuration are intended for local testing. Set a strong `API_KEY` and restrict network access before deploying publicly.
+> Only `/secure/*` routes require `X-API-Key`. Public CRUD, health, stats, the UI, docs, and `/lab/*` do not require a key. Use a strong `API_KEY` and restrict network access before deploying publicly.
 
 ---
 
@@ -96,18 +96,18 @@ Base URL: `http://localhost:8795`
 | `GET`    | `/health` | — | Health check → `{"status":"ok"}` |
 | `GET`    | `/stats` | — | **Telemetry** — request counts, uptime, methods/statuses (in-memory, resets on restart) |
 | **HTTP lab** | | | |
-| `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD` | `/lab/echo` | none | Echo request method, path, query, headers, body, JSON parse, and byte count; sensitive headers are redacted |
-| `GET`, `HEAD` | `/lab/status/{code}` | none | Return a chosen HTTP status from 200 through 599 |
-| `GET`, `HEAD` | `/lab/delay/{ms}` | none | Wait 0–10,000 ms, then return a JSON result; request cancellation stops the wait |
-| `GET`, `HEAD` | `/lab/redirect` | none | Redirect to a local absolute path with a selectable redirect status |
-| `GET`, `HEAD` | `/lab/cache` | none | Exercise ETag and conditional 304 caching behavior |
+| `GET`, `POST`, `PUT`, `PATCH`, `DELETE`, `HEAD` | `/lab/echo` | — | Echo request method, path, query, headers, body, JSON parse, and byte count; sensitive headers are redacted |
+| `GET`, `HEAD` | `/lab/status/{code}` | — | Return a chosen HTTP status from 200 through 599 |
+| `GET`, `HEAD` | `/lab/delay/{ms}` | — | Wait 0–10,000 ms, then return a JSON result; request cancellation stops the wait |
+| `GET`, `HEAD` | `/lab/redirect` | — | Redirect to a local absolute path with a selectable redirect status |
+| `GET`, `HEAD` | `/lab/cache` | — | Exercise ETag and conditional 304 caching behavior |
 | **Public** | | | |
-| `GET`    | `/public/items` | none | **List** all public items |
-| `POST`   | `/public/items` | none | **Create** — store any JSON payload |
-| `GET`    | `/public/items/{id}` | none | **Read** one public item |
-| `PUT`    | `/public/items/{id}` | none | **Update** — replace a public item's payload |
-| `DELETE` | `/public/items/{id}` | none | **Delete** one public item |
-| `DELETE` | `/public/items` | none | **Clear all** public items |
+| `GET`    | `/public/items` | — | **List** all public items |
+| `POST`   | `/public/items` | — | **Create** — store any JSON payload |
+| `GET`    | `/public/items/{id}` | — | **Read** one public item |
+| `PUT`    | `/public/items/{id}` | — | **Update** — replace a public item's payload |
+| `DELETE` | `/public/items/{id}` | — | **Delete** one public item |
+| `DELETE` | `/public/items` | — | **Clear all** public items |
 | **Secure** | | | |
 | `GET`    | `/secure/items` | `X-API-Key` | **List** all secure items |
 | `POST`   | `/secure/items` | `X-API-Key` | **Create** — store any JSON payload |
@@ -119,10 +119,15 @@ Base URL: `http://localhost:8795`
 | `GET`    | `/` | — | Built-in testing UI (stats bar, per-item CRUD actions, search, auto-refresh, compose-any-request) |
 | `GET`    | `/openapi.json` | — | OpenAPI 3.1 schema (for importers) |
 | `GET` | `/docs` | — | Embedded API documentation page |
+| `GET` | `/secure/uploads/status` | `X-API-Key` | Check optional R2 setup; returns `configured` and the 10 MiB limit without exposing credentials |
+| `GET` | `/secure/uploads` | `X-API-Key` | List up to 100 files in the app's private `uploads/` prefix; supports an opaque `cursor` (maximum 2048 bytes) |
+| `POST` | `/secure/uploads?filename=example.txt` | `X-API-Key` | Upload nonempty raw binary data up to 10 MiB (not multipart); filename must be ASCII alphanumeric first, then ASCII alphanumeric, `.`, `_`, or `-`, max 128 characters |
+| `GET`, `HEAD` | `/secure/uploads/{key}` | `X-API-Key` | Download a protected attachment or inspect its headers |
+| `DELETE` | `/secure/uploads/{key}` | `X-API-Key` | Idempotently delete an uploaded file (204) |
 
 ### HTTP lab
 
-`GET /lab/echo` is useful for inspecting a request. It returns `method`, `path`, `query` (each query value as an array), `headers` (each header value as an array), `body` (raw text), `json` (parsed JSON or `null`), and `bytes`. `Authorization`, `Cookie`, and `X-API-Key` values are redacted. Bodies larger than 1 MiB receive `413 Payload Too Large`.
+The HTTP lab is public; only `/secure/*` endpoints require `X-API-Key`. `GET /lab/echo` is useful for inspecting a request. It returns `method`, `path`, `query` (each query value as an array), `headers` (each header value as an array), `body` (raw text), `json` (parsed JSON or `null`), and `bytes`. `Authorization`, `Cookie`, and `X-API-Key` values are redacted. Bodies larger than 1 MiB receive `413 Payload Too Large`.
 
 The status endpoint accepts any code from 200 to 599 and returns `{"status":N,"message":"..."}`. Statuses 204, 205, and 304 have no response body. A 429 response includes `Retry-After: 5`.
 
@@ -177,7 +182,7 @@ Every stored item looks like this — `payload` is exactly what you sent:
 
 ## 🧪 Example calls
 
-### Create — public POST (no auth)
+### Create — public POST
 
 ```bash
 curl -X POST http://localhost:8795/public/items \
@@ -229,11 +234,72 @@ curl http://localhost:8795/secure/items
 # -> {"detail":"Invalid or missing API key. Send header 'X-API-Key'."}
 ```
 
+### Upload a file to private Cloudflare R2 storage
+
+R2 storage is optional and uses server-side S3-compatible requests without an extra SDK or dependency. Create an R2 bucket and an R2 API token with **Object Read & Write** permission scoped to that bucket. Keep the bucket private: a public bucket or bucket CORS rules are not needed. Cloudflare shows the Secret Access Key only once; save it securely with the Access Key ID. [Cloudflare's token guide](https://developers.cloudflare.com/r2/api/tokens/) explains token creation and endpoint formats.
+
+Configure these variables locally in the gitignored `.env.r2` file (create it yourself and fill in the R2 values; never commit or share it):
+
+```dotenv
+R2_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+R2_BUCKET=your-bucket-name
+R2_ACCESS_KEY_ID=your-access-key-id
+R2_SECRET_ACCESS_KEY=your-secret-access-key
+```
+
+For jurisdiction-specific buckets, use that jurisdiction's endpoint, such as `https://<account-id>.eu.r2.cloudflarestorage.com`, `https://<account-id>.us.r2.cloudflarestorage.com`, or `https://<account-id>.fedramp.r2.cloudflarestorage.com`. The app reads process environment variables. Load the ignored file in your terminal before starting it:
+
+```bash
+set -a; . ./.env.r2; set +a
+go run .
+```
+
+In PowerShell, load it without printing the values, then start the server:
+
+```powershell
+Get-Content .env.r2 | ForEach-Object {
+  if ($_ -match '^([^#][^=]*)=(.*)$') {
+    [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
+  }
+}
+go run .
+```
+
+On the existing Fly app, import the ignored `.env.fly` and `.env.r2` files from the repository root, then deploy:
+
+```powershell
+fly secrets import < .env.fly
+fly secrets import < .env.r2
+fly deploy -a small-server
+```
+
+`GET /secure/uploads/status` reports whether all R2 settings are present and the maximum size (`10485760` bytes). Uploads return 503 when R2 is not configured, 400 for an empty body or invalid filename, 413 above 10 MiB, 429 with `Retry-After: 1` when four uploads are already in progress, 404 for a missing download, and a generic 502 on a storage failure. The UI normalizes selected filenames to the allowed ASCII letters, digits, dot, underscore, and hyphen format before upload; API callers must provide a valid filename directly. The random key has a 32-character lowercase hex prefix followed by `-` and the validated filename. At most four uploads run concurrently; an additional upload request receives 429 and `Retry-After: 1`. Listing and file operations are restricted to the app's `uploads/` object prefix.
+
+Use `curl --data-binary` so the request body is sent as raw bytes. Replace `YOUR-API-KEY` with the configured key:
+
+```bash
+curl -X POST 'https://small-server.fly.dev/secure/uploads?filename=example.txt' \
+  -H 'X-API-Key: YOUR-API-KEY' \
+  -H 'Content-Type: application/octet-stream' \
+  --data-binary @example.txt
+
+curl 'https://small-server.fly.dev/secure/uploads' \
+  -H 'X-API-Key: YOUR-API-KEY'
+
+# Use the key returned by the upload response or listing
+curl -OJ 'https://small-server.fly.dev/secure/uploads/0123456789abcdef0123456789abcdef-example.txt' \
+  -H 'X-API-Key: YOUR-API-KEY'
+curl -X DELETE 'https://small-server.fly.dev/secure/uploads/0123456789abcdef0123456789abcdef-example.txt' \
+  -H 'X-API-Key: YOUR-API-KEY'
+```
+
+Cloudflare R2 Standard currently includes 10 GB-month storage, 1 million Class A operations, and 10 million Class B operations each month; usage above the free tier is billed by Cloudflare separately from Fly. [See current R2 pricing](https://developers.cloudflare.com/r2/pricing/).
+
 ---
 
 ## 📮 Postman / Bruno
 
-`postman_collection.json` is a ready-to-import collection (v2.1 format) with Meta, HTTP Lab, Public, and Secure folders. **Everything is hardcoded** — full URLs, sample payloads, and the `X-API-Key: secret-key-123` header on secure requests. No environment or setup is needed.
+`postman_collection.json` is a ready-to-import collection (v2.1 format) with Meta, HTTP Lab, Public, Secure, and Uploads folders. Only the Uploads folder has a folder-level `X-API-Key`, set to the development default `secret-key-123`; update that folder auth for a different API key. Secure CRUD requests keep their own key headers, while public and missing-key examples remain unauthenticated.
 
 ### Use it (zero config)
 
@@ -258,36 +324,27 @@ The collection includes lab requests as well as CRUD requests; the exact request
 
 ## ☁️ Deploy to Fly.io
 
-Small-Server is Fly.io-ready. SQLite is persisted via a Fly **volume** so your data survives restarts and deploys. A `Dockerfile` (multi-stage Go build) and `fly.toml` are included.
+Small-Server is deployed at **https://small-server.fly.dev**. SQLite is persisted via a Fly **volume** so your data survives restarts and deploys. The existing app uses one 512 MB auto-stopping VM in Amsterdam (`ams`) and a 1 GB volume. A `Dockerfile` (multi-stage Go build) and `fly.toml` are included.
 
 ### Prerequisites
 
-1. Install `flyctl`: https://fly.io/docs/flyctl/install/
-2. Sign up / sign in: `fly auth signup` (or `fly auth login`)
+Install and sign in to `flyctl` if needed: https://fly.io/docs/flyctl/install/
 
 ### Deploy steps
 
 ```bash
-# 1. Create the app (uses the included Dockerfile + fly.toml)
-fly launch --no-deploy
-
-# 2. Create a 1GB persistent volume for SQLite (one-time)
-fly volumes create small_server_data --size 1
-
-# 3. Set your API key as a secret (don't commit it)
-fly secrets set API_KEY="your-own-secret-key"
-
-# 4. Deploy 🚀
-fly deploy
+# Import the locally ignored API key file, then deploy the existing app.
+fly secrets import < .env.fly
+fly deploy -a small-server
 ```
 
-When it finishes you'll get a URL like `https://small-server.fly.dev`. Open it → the test UI loads. Done.
+Open **https://small-server.fly.dev** to use the test UI. Only `/secure/*` endpoints require the API key in `X-API-Key`; public and lab routes do not.
 
-> **Region:** the included `fly.toml` uses `ams` (Amsterdam). Change it in `fly.toml` before `fly launch` if you want somewhere closer.
+> **Region:** the existing VM and volume are in `ams` (Amsterdam). Review volume and machine placement before changing the app's region.
 
 ### What's wired up
 
-- **Persistent SQLite** — the `small_server_data` volume mounts at `/data`, and `DB_PATH=/data/data.db` is set in `fly.toml` + the Dockerfile. Your POSTed data survives every restart/redeploy.
+- **Persistent SQLite** — the 1 GB `small_server_data` volume mounts at `/data`, and `DB_PATH=/data/data.db` is set in `fly.toml` + the Dockerfile. Your POSTed data survives every restart/redeploy.
 - **Tiny image** — multi-stage build produces a ~20MB image (static Go binary on Alpine). Cold start is ~100ms — no more health-check warnings.
 - **Auto scale-to-zero** — the VM sleeps when idle, wakes in ~1s on the first request.
 - **HTTPS** — Fly auto-provisions TLS. `force_https = true` redirects HTTP → HTTPS.
@@ -295,8 +352,8 @@ When it finishes you'll get a URL like `https://small-server.fly.dev`. Open it �
 ### Reset the DB on Fly
 
 ```bash
-curl -X DELETE https://YOUR-APP.fly.dev/public/items
-curl -X DELETE https://YOUR-APP.fly.dev/secure/items -H "X-API-Key: YOUR-KEY"
+curl -X DELETE https://small-server.fly.dev/public/items
+curl -X DELETE https://small-server.fly.dev/secure/items -H "X-API-Key: YOUR-KEY"
 ```
 
 ---
