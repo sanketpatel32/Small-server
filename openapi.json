@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Small-Server",
-    "version": "1.1.0",
-    "description": "A tiny REST API testing server — full CRUD on any JSON payload, SQLite-backed. Built with Go."
+    "version": "1.2.0",
+    "description": "A tiny REST API testing server — full CRUD on any JSON payload, SQLite-backed. Built with Go. Includes public HTTP lab endpoints for echo, status, delay, redirect, and cache testing."
   },
   "components": {
     "securitySchemes": {
@@ -17,37 +17,166 @@
       "Item": {
         "type": "object",
         "properties": {
-          "id": { "type": "integer" },
-          "payload": { "description": "Whatever JSON you sent, stored verbatim" },
-          "scope": { "type": "string", "enum": ["public", "secure"] },
-          "created_at": { "type": "string" }
+          "id": {
+            "type": "integer"
+          },
+          "payload": {
+            "description": "Whatever JSON you sent, stored verbatim"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "public",
+              "secure"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          }
         }
       },
       "Cleared": {
         "type": "object",
         "properties": {
-          "status": { "type": "string", "example": "cleared" },
-          "scope": { "type": "string" },
-          "removed": { "type": "integer", "description": "count of items deleted" }
+          "status": {
+            "type": "string",
+            "example": "cleared"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "removed": {
+            "type": "integer",
+            "description": "count of items deleted"
+          }
         }
       },
       "Deleted": {
         "type": "object",
         "properties": {
-          "status": { "type": "string", "example": "deleted" },
-          "id": { "type": "integer" }
+          "status": {
+            "type": "string",
+            "example": "deleted"
+          },
+          "id": {
+            "type": "integer"
+          }
         }
       },
       "Error": {
         "type": "object",
-        "properties": { "detail": { "type": "string" } }
+        "properties": {
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "EchoResponse": {
+        "type": "object",
+        "required": [
+          "method",
+          "path",
+          "query",
+          "headers",
+          "body",
+          "json",
+          "bytes"
+        ],
+        "properties": {
+          "method": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "query": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "headers": {
+            "type": "object",
+            "description": "Header names map to arrays of values. Authorization, Cookie, and X-API-Key values are redacted.",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "body": {
+            "type": "string",
+            "description": "Raw request body text."
+          },
+          "json": {
+            "description": "Parsed JSON body, or null when the body is not valid JSON."
+          },
+          "bytes": {
+            "type": "integer",
+            "description": "Request body size in bytes."
+          }
+        }
+      },
+      "LabStatus": {
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "LabDelay": {
+        "type": "object",
+        "required": [
+          "delay_ms",
+          "status"
+        ],
+        "properties": {
+          "delay_ms": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "const": "ok"
+          }
+        }
+      },
+      "LabCached": {
+        "type": "object",
+        "required": [
+          "message",
+          "version"
+        ],
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Cached response"
+          },
+          "version": {
+            "type": "integer",
+            "const": 1
+          }
+        }
       }
     }
   },
   "paths": {
     "/health": {
       "get": {
-        "tags": ["meta"],
+        "tags": [
+          "meta"
+        ],
         "summary": "Health check",
         "responses": {
           "200": {
@@ -56,7 +185,12 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "properties": { "status": { "type": "string", "example": "ok" } }
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
                 }
               }
             }
@@ -66,7 +200,9 @@
     },
     "/stats": {
       "get": {
-        "tags": ["meta"],
+        "tags": [
+          "meta"
+        ],
         "summary": "Lightweight in-memory telemetry (resets on restart)",
         "responses": {
           "200": {
@@ -76,27 +212,65 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "uptime_seconds": { "type": "integer" },
-                    "started_at": { "type": "string", "format": "date-time" },
-                    "total_requests": { "type": "integer" },
-                    "by_method": { "type": "object", "additionalProperties": { "type": "integer" } },
-                    "by_status": { "type": "object", "additionalProperties": { "type": "integer" } },
-                    "last_request": { "type": "string", "format": "date-time" },
+                    "uptime_seconds": {
+                      "type": "integer"
+                    },
+                    "started_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "total_requests": {
+                      "type": "integer"
+                    },
+                    "by_method": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "by_status": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "last_request": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
                     "latency": {
                       "type": "object",
                       "description": "Latency over the last 100 requests",
                       "properties": {
-                        "avg_ms": { "type": "number" },
-                        "min_ms": { "type": "number" },
-                        "max_ms": { "type": "number" },
-                        "p95_ms": { "type": "number" },
-                        "samples": { "type": "integer" }
+                        "avg_ms": {
+                          "type": "number"
+                        },
+                        "min_ms": {
+                          "type": "number"
+                        },
+                        "max_ms": {
+                          "type": "number"
+                        },
+                        "p95_ms": {
+                          "type": "number"
+                        },
+                        "samples": {
+                          "type": "integer"
+                        }
                       }
                     },
-                    "items_total": { "type": "integer" },
-                    "items_public": { "type": "integer" },
-                    "items_secure": { "type": "integer" },
-                    "db_size_bytes": { "type": "integer" }
+                    "items_total": {
+                      "type": "integer"
+                    },
+                    "items_public": {
+                      "type": "integer"
+                    },
+                    "items_secure": {
+                      "type": "integer"
+                    },
+                    "db_size_bytes": {
+                      "type": "integer"
+                    }
                   }
                 }
               }
@@ -107,120 +281,946 @@
     },
     "/public/items": {
       "get": {
-        "tags": ["public"],
+        "tags": [
+          "public"
+        ],
         "summary": "List all public items",
         "responses": {
           "200": {
             "description": "array of items",
-            "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Item"
+                  }
+                }
+              }
+            }
           }
         }
       },
       "post": {
-        "tags": ["public"],
+        "tags": [
+          "public"
+        ],
         "summary": "Create — store ANY JSON payload (no auth)",
-        "requestBody": { "required": false, "content": { "application/json": { "schema": { "description": "Any valid JSON — object, array, string, number, boolean, or null" } } } },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Any valid JSON — object, array, string, number, boolean, or null"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "created item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } }
+          "201": {
+            "description": "created item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          }
         }
       },
       "delete": {
-        "tags": ["public"],
+        "tags": [
+          "public"
+        ],
         "summary": "Clear all — delete every public item",
         "responses": {
-          "200": { "description": "cleared", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Cleared" } } } }
+          "200": {
+            "description": "cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cleared"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/public/items/{id}": {
-      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
       "get": {
-        "tags": ["public"],
+        "tags": [
+          "public"
+        ],
         "summary": "Read one public item by id",
         "responses": {
-          "200": { "description": "item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
-          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "200": {
+            "description": "item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
         }
       },
       "put": {
-        "tags": ["public"],
+        "tags": [
+          "public"
+        ],
         "summary": "Update — replace the payload of a public item",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "description": "Any valid JSON — replaces the existing payload" } } } },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Any valid JSON — replaces the existing payload"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": { "description": "updated item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
-          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "200": {
+            "description": "updated item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
         }
       },
       "delete": {
-        "tags": ["public"],
+        "tags": [
+          "public"
+        ],
         "summary": "Delete one public item by id",
         "responses": {
-          "200": { "description": "deleted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Deleted" } } } },
-          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "200": {
+            "description": "deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deleted"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/secure/items": {
       "get": {
-        "tags": ["secure"],
+        "tags": [
+          "secure"
+        ],
         "summary": "List all secure items",
-        "security": [{ "ApiKeyAuth": [] }],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "array of items", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Item" } } } } },
-          "401": { "description": "missing/invalid API key" }
+          "200": {
+            "description": "array of items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Item"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing/invalid API key"
+          }
         }
       },
       "post": {
-        "tags": ["secure"],
+        "tags": [
+          "secure"
+        ],
         "summary": "Create — store ANY JSON payload",
-        "security": [{ "ApiKeyAuth": [] }],
-        "requestBody": { "required": false, "content": { "application/json": { "schema": { "description": "Any valid JSON" } } } },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Any valid JSON"
+              }
+            }
+          }
+        },
         "responses": {
-          "201": { "description": "created item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
-          "401": { "description": "missing/invalid API key" }
+          "201": {
+            "description": "created item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing/invalid API key"
+          }
         }
       },
       "delete": {
-        "tags": ["secure"],
+        "tags": [
+          "secure"
+        ],
         "summary": "Clear all — delete every secure item",
-        "security": [{ "ApiKeyAuth": [] }],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "cleared", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Cleared" } } } },
-          "401": { "description": "missing/invalid API key" }
+          "200": {
+            "description": "cleared",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cleared"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing/invalid API key"
+          }
         }
       }
     },
     "/secure/items/{id}": {
-      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer"
+          }
+        }
+      ],
       "get": {
-        "tags": ["secure"],
+        "tags": [
+          "secure"
+        ],
         "summary": "Read one secure item by id",
-        "security": [{ "ApiKeyAuth": [] }],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
-          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "missing/invalid API key" }
+          "200": {
+            "description": "item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing/invalid API key"
+          }
         }
       },
       "put": {
-        "tags": ["secure"],
+        "tags": [
+          "secure"
+        ],
         "summary": "Update — replace the payload of a secure item",
-        "security": [{ "ApiKeyAuth": [] }],
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "description": "Any valid JSON — replaces the existing payload" } } } },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Any valid JSON — replaces the existing payload"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": { "description": "updated item", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Item" } } } },
-          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "missing/invalid API key" }
+          "200": {
+            "description": "updated item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing/invalid API key"
+          }
         }
       },
       "delete": {
-        "tags": ["secure"],
+        "tags": [
+          "secure"
+        ],
         "summary": "Delete one secure item by id",
-        "security": [{ "ApiKeyAuth": [] }],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
         "responses": {
-          "200": { "description": "deleted", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Deleted" } } } },
-          "404": { "description": "not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "missing/invalid API key" }
+          "200": {
+            "description": "deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deleted"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "missing/invalid API key"
+          }
+        }
+      }
+    },
+    "/lab/echo": {
+      "get": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Echo request details",
+        "description": "Returns the request method, path, query values and header values as arrays, raw body text, parsed JSON or null, and body byte count. Authorization, Cookie, and X-API-Key header values are redacted. Request bodies are limited to 1 MiB.",
+        "responses": {
+          "200": {
+            "description": "Echoed request (HEAD has no response body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Echo request details",
+        "description": "Returns the request method, path, query values and header values as arrays, raw body text, parsed JSON or null, and body byte count. Authorization, Cookie, and X-API-Key header values are redacted. Request bodies are limited to 1 MiB.",
+        "responses": {
+          "200": {
+            "description": "Echoed request (HEAD has no response body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "description": "Raw request body, up to 1 MiB.",
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Echo request details",
+        "description": "Returns the request method, path, query values and header values as arrays, raw body text, parsed JSON or null, and body byte count. Authorization, Cookie, and X-API-Key header values are redacted. Request bodies are limited to 1 MiB.",
+        "responses": {
+          "200": {
+            "description": "Echoed request (HEAD has no response body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "description": "Raw request body, up to 1 MiB.",
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Echo request details",
+        "description": "Returns the request method, path, query values and header values as arrays, raw body text, parsed JSON or null, and body byte count. Authorization, Cookie, and X-API-Key header values are redacted. Request bodies are limited to 1 MiB.",
+        "responses": {
+          "200": {
+            "description": "Echoed request (HEAD has no response body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB"
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "description": "Raw request body, up to 1 MiB.",
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            },
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Echo request details",
+        "description": "Returns the request method, path, query values and header values as arrays, raw body text, parsed JSON or null, and body byte count. Authorization, Cookie, and X-API-Key header values are redacted. Request bodies are limited to 1 MiB.",
+        "responses": {
+          "200": {
+            "description": "Echoed request (HEAD has no response body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB"
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Echo request details",
+        "description": "Returns the request method, path, query values and header values as arrays, raw body text, parsed JSON or null, and body byte count. Authorization, Cookie, and X-API-Key header values are redacted. Request bodies are limited to 1 MiB.",
+        "responses": {
+          "200": {
+            "description": "Echoed request (HEAD has no response body)"
+          },
+          "413": {
+            "description": "Request body exceeds 1 MiB"
+          }
+        }
+      }
+    },
+    "/lab/status/{code}": {
+      "parameters": [
+        {
+          "name": "code",
+          "in": "path",
+          "required": true,
+          "description": "HTTP status code to return (200–599).",
+          "schema": {
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 599
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Return a chosen HTTP status",
+        "description": "Returns {status,message} for statuses with a body. 204, 205, and 304 have no response body. 429 includes Retry-After: 5.",
+        "responses": {
+          "200": {
+            "description": "Requested response (its actual HTTP status is the path value; HEAD and bodyless statuses have no body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The requested status code from 200 through 599; response contains {status,message} except for 204, 205, and 304",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Return a chosen HTTP status",
+        "description": "Returns {status,message} for statuses with a body. 204, 205, and 304 have no response body. 429 includes Retry-After: 5.",
+        "responses": {
+          "200": {
+            "description": "Requested response (its actual HTTP status is the path value; HEAD and bodyless statuses have no body)"
+          },
+          "default": {
+            "description": "The requested status code from 200 through 599; response contains {status,message} except for 204, 205, and 304",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lab/delay/{ms}": {
+      "parameters": [
+        {
+          "name": "ms",
+          "in": "path",
+          "required": true,
+          "description": "Delay in milliseconds (0–10,000).",
+          "schema": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Wait, then return a result",
+        "description": "Wait is cancellable when the request context is canceled.",
+        "responses": {
+          "200": {
+            "description": "Delay completed (HEAD has no response body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabDelay"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or out-of-range delay"
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Wait, then return a result",
+        "description": "Wait is cancellable when the request context is canceled.",
+        "responses": {
+          "200": {
+            "description": "Delay completed (HEAD has no response body)"
+          },
+          "400": {
+            "description": "Invalid or out-of-range delay"
+          }
+        }
+      }
+    },
+    "/lab/redirect": {
+      "get": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Redirect to a local path",
+        "parameters": [
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "description": "Local absolute path; defaults to /lab/echo. External URLs and paths beginning with // are rejected.",
+            "schema": {
+              "type": "string",
+              "default": "/lab/echo"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "description": "Redirect status.",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                301,
+                302,
+                303,
+                307,
+                308
+              ],
+              "default": 302
+            }
+          }
+        ],
+        "responses": {
+          "301": {
+            "description": "Redirect (when code=301)",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect (default)",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "303": {
+            "description": "Redirect (when code=303)",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "307": {
+            "description": "Redirect (when code=307)",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "308": {
+            "description": "Redirect (when code=308)",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or external redirect target"
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Redirect to a local path (HEAD)",
+        "parameters": [
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "/lab/echo"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "enum": [
+                301,
+                302,
+                303,
+                307,
+                308
+              ],
+              "default": 302
+            }
+          }
+        ],
+        "responses": {
+          "301": {
+            "description": "Redirect (when code=301)"
+          },
+          "302": {
+            "description": "Redirect (default)"
+          },
+          "303": {
+            "description": "Redirect (when code=303)"
+          },
+          "307": {
+            "description": "Redirect (when code=307)"
+          },
+          "308": {
+            "description": "Redirect (when code=308)"
+          },
+          "400": {
+            "description": "Invalid or external redirect target"
+          }
+        }
+      }
+    },
+    "/lab/cache": {
+      "get": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Exercise conditional caching",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Matching \"small-server-v1\" or * produces 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cached response (HEAD has no body)",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string",
+                  "const": "\"small-server-v1\""
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "public, max-age=60"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabCached"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified; no response body",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string",
+                  "const": "\"small-server-v1\""
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "public, max-age=60"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "http-lab"
+        ],
+        "summary": "Exercise conditional caching",
+        "parameters": [
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Matching \"small-server-v1\" or * produces 304."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cached response (HEAD has no body)",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string",
+                  "const": "\"small-server-v1\""
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "public, max-age=60"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified; no response body",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string",
+                  "const": "\"small-server-v1\""
+                }
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "public, max-age=60"
+                }
+              }
+            }
+          }
         }
       }
     }

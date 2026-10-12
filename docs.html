@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Small-Server · API guide</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0a0b0d;color:#f0f2f7;font:16px/1.65 system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:32px 24px}a{color:#a895ff}a:focus-visible{outline:2px solid #4cd7a0;outline-offset:4px}h1{font-size:clamp(28px,5vw,44px);margin-bottom:8px}h2{margin-top:40px}p{max-width:75ch;color:#c8cfdb}nav{display:flex;gap:20px;flex-wrap:wrap}code,pre{font:14px/1.6 ui-monospace,monospace;background:#191c23;border-radius:6px}code{padding:2px 6px}pre{padding:18px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}td,th{padding:14px 10px;text-align:left;border-bottom:1px solid #30343c}th{color:#929bac}section{scroll-margin-top:20px}.note{border-left:3px solid #4cd7a0;padding:4px 18px;background:#13151a}
+</style>
+</head>
+<body><main>
+<nav><a href="/">← Test console</a><a href="/openapi.json">OpenAPI schema</a><a href="#storage">Storage</a><a href="#lab">HTTP lab</a><a href="#recipes">Test recipes</a></nav>
+<h1>A sandbox for your HTTP clients.</h1>
+<p>Store webhook payloads, inspect what your client sends, and exercise error handling. Open the HTTP test lab in the console for ready-to-run scenarios and a response inspector.</p>
+<div class="note"><p>Public endpoints and telemetry are accessible without authentication. Secure storage requires <code>X-API-Key</code>. The default development key is <code>secret-key-123</code>; set <code>API_KEY</code> before sharing the server. Use synthetic test data.</p></div>
+<section id="storage"><h2>Payload storage</h2>
+<p>Replace <code>{scope}</code> with <code>public</code> or <code>secure</code>. Item IDs only resolve in their own scope. Any valid JSON value is supported, including arrays, strings, numbers, booleans, and null. An empty request body stores null.</p>
+<div class="table-wrap"><table><thead><tr><th>Method</th><th>Path</th><th>Result</th></tr></thead><tbody>
+<tr><td>GET</td><td>/{scope}/items</td><td>200 · array, newest first</td></tr>
+<tr><td>POST</td><td>/{scope}/items</td><td>201 · stored item</td></tr>
+<tr><td>GET</td><td>/{scope}/items/{id}</td><td>200 · item, or 404</td></tr>
+<tr><td>PUT</td><td>/{scope}/items/{id}</td><td>200 · replace the entire payload</td></tr>
+<tr><td>DELETE</td><td>/{scope}/items/{id}</td><td>200 · delete one item</td></tr>
+<tr><td>DELETE</td><td>/{scope}/items</td><td>200 · clear the scope and return removed count</td></tr>
+</tbody></table></div>
+<pre>{"id":1,"payload":{"event":"demo"},"scope":"public","created_at":"2026-10-11 12:00:00"}</pre>
+<p>Malformed JSON returns 400. Missing or incorrect API keys return 401. Unsupported storage methods return 405 with an Allow header.</p></section>
+<section id="lab"><h2>HTTP test lab</h2>
+<p>Lab requests do not create database records. GET endpoints also support HEAD. OPTIONS returns a CORS preflight response.</p>
+<div class="table-wrap"><table><thead><tr><th>Path</th><th>Behavior</th></tr></thead><tbody>
+<tr><td><code>/lab/echo</code></td><td>GET, HEAD, POST, PUT, PATCH, DELETE. Echo method, path, repeated query values, headers, raw body, parsed JSON, and byte count. Body limit: 1 MiB (413 above it). Authorization, Proxy-Authorization, Cookie, and X-API-Key values are redacted.</td></tr>
+<tr><td><code>/lab/status/{code}</code></td><td>Choose any integer from 200–599. 204, 205, and 304 have no body. 429 includes Retry-After: 5. Other statuses return status and message.</td></tr>
+<tr><td><code>/lab/delay/{ms}</code></td><td>Delay 0–10000 milliseconds. Cancelled requests stop the timer. Response: delay_ms and status.</td></tr>
+<tr><td><code>/lab/redirect?to=/lab/echo&amp;code=307</code></td><td>Choose 301, 302, 303, 307, or 308. Defaults: /lab/echo and 302. Only local paths are allowed. The console follows redirects and shows the final URL/status.</td></tr>
+<tr><td><code>/lab/cache</code></td><td>Returns ETag: "small-server-v1" and Cache-Control: public, max-age=60. A matching If-None-Match (including weak tags or *) returns 304.</td></tr>
+</tbody></table></div>
+<p>Invalid status, delay, or redirect parameters return 400. <code>/health</code> reports availability; <code>/stats</code> reports request counters, latency, and item counts. Telemetry resets on restart and includes console polling.</p></section>
+<section id="recipes"><h2>Try these test recipes</h2>
+<pre>curl -X POST 'http://localhost:8795/lab/echo?tag=one&amp;tag=two' \
+  -H "Content-Type: application/json" -H "X-Test-Id: demo" \
+  -d '{"event":"order.created"}'
+
+curl -i http://localhost:8795/lab/status/429
+curl --max-time 1 http://localhost:8795/lab/delay/2000
+curl -i http://localhost:8795/lab/cache \
+  -H 'If-None-Match: "small-server-v1"'
+curl -i http://localhost:8795/secure/items</pre>
+<p>In the console, load a scenario, set an expected status, and send. PASS/FAIL checks the final HTTP status only. For redirects, use curl without <code>-L</code> to inspect the initial Location header. Custom request headers use a JSON object of string values; the browser controls restricted headers such as Host and Cookie.</p>
+<p>History keeps the last 20 requests in memory and disappears on reload. Selecting a history entry loads it for review; press Send to execute. API keys are held in memory. Copy response exports the response currently shown.</p></section>
+<section><h2>Run and verify</h2><pre>go run .
+go test ./...
+go vet ./...
+go build .</pre><p>Configuration: <code>PORT=8795</code>, <code>DB_PATH=./data.db</code>, and <code>API_KEY</code>. Changes to the embedded console, guide, or OpenAPI require restarting <code>go run</code> or rebuilding the binary. The README covers Windows, Docker, and Fly deployment. Import the repository's Postman collection to use the same lab outside the browser.</p></section>
+</main></body></html>

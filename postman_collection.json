@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-small-server-0001-0000-000000000001",
     "name": "Small-Server",
-    "description": "A tiny REST API testing server (FastAPI + SQLite).\n\nAccepts ANY JSON payload on POST — objects, arrays, strings, numbers, booleans, even null. Stored verbatim in SQLite.\n\nAll values are HARDCODED. Start the server, import this file, hit Send — no environment, no variables, no setup.",
+    "description": "A tiny REST API testing server (Go + SQLite) with CRUD and HTTP lab requests. Import and send requests against http://localhost:8795.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -92,6 +92,416 @@
             },
             "description": "Raw OpenAPI 3.x schema."
           }
+        }
+      ]
+    },
+    {
+      "name": "HTTP Lab",
+      "description": "Public endpoints for exercising HTTP client behavior. Echo redacts Authorization, Cookie, and X-API-Key values; request bodies are capped at 1 MiB.",
+      "item": [
+        {
+          "name": "Echo GET",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/lab/echo",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "echo"
+              ]
+            },
+            "description": "Echo method, path, query, headers, body, parsed JSON, and byte count."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('method echoed', () => pm.expect(pm.response.json().method).to.eql('GET'));",
+                  "pm.test('query values are arrays', () => pm.expect(pm.response.json().query).to.be.an('object'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Echo POST JSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8795/lab/echo",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "echo"
+              ]
+            },
+            "description": "Echo JSON and raw request details.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"lab\":true,\"items\":[1,2]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('POST echoed', () => pm.expect(pm.response.json().method).to.eql('POST'));",
+                  "pm.test('parsed JSON echoed', () => pm.expect(pm.response.json().json).to.eql({lab:true,items:[1,2]}));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Echo PUT",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8795/lab/echo",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "echo"
+              ]
+            },
+            "description": "Echo a raw JSON request body.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"method\":\"put\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('PUT echoed', () => pm.expect(pm.response.json().method).to.eql('PUT'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Echo PATCH",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8795/lab/echo",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "echo"
+              ]
+            },
+            "description": "Echo a raw JSON request body.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"method\":\"patch\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('PATCH echoed', () => pm.expect(pm.response.json().method).to.eql('PATCH'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Echo DELETE",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/lab/echo",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "echo"
+              ]
+            },
+            "description": "Echo a DELETE request."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('DELETE echoed', () => pm.expect(pm.response.json().method).to.eql('DELETE'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Echo HEAD",
+          "request": {
+            "method": "HEAD",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8795/lab/echo",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "echo"
+              ]
+            },
+            "description": "HEAD returns the same response headers without a response body."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Return status 418",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/lab/status/418",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "status",
+                "418"
+              ]
+            },
+            "description": "Return the requested HTTP status code with a JSON status/message body."
+          },
+          "response": []
+        },
+        {
+          "name": "Status 204 (no body)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/lab/status/204",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "status",
+                "204"
+              ]
+            },
+            "description": "Return 204 No Content without a response body."
+          },
+          "response": []
+        },
+        {
+          "name": "Delay 250 ms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/lab/delay/250",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "delay",
+                "250"
+              ]
+            },
+            "description": "Wait 250 milliseconds, then return {delay_ms,status}. Delay range is 0–10000 ms."
+          },
+          "response": []
+        },
+        {
+          "name": "Redirect to echo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8795/lab/redirect",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "redirect"
+              ]
+            },
+            "description": "Redirect to a local absolute path. Defaults to /lab/echo with code 302."
+          },
+          "response": []
+        },
+        {
+          "name": "Conditional cache",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "If-None-Match",
+                "value": "\"small-server-v1\""
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8795/lab/cache",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "cache"
+              ]
+            },
+            "description": "Return the cached response and ETag. Set If-None-Match: \"small-server-v1\" to receive 304."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('ETag set', () => pm.expect(pm.response.headers.get('ETag')).to.eql('\\\"small-server-v1\\\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conditional cache (304)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "If-None-Match",
+                "value": "*"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8795/lab/cache",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8795",
+              "path": [
+                "lab",
+                "cache"
+              ]
+            },
+            "description": "Matching If-None-Match returns 304 with no body."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ETag may be set to check 304', () => pm.expect(pm.response.code).to.be.oneOf([200,304]));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

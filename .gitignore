@@ -26,3 +26,6 @@ Thumbs.db
 .claude/
 .zcode/
 .shots/
+
+# accidental log
+smoke3.log

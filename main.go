@@ -13,7 +13,7 @@
 //	Helpers:
 //	    GET  /                      built-in testing UI (embedded)
 //	    GET  /health                health check
-//	    GET  /docs                  (alias of /) — Swagger not auto-generated in Go
+//	    GET  /docs                  API documentation and testing recipes
 //	    GET  /openapi.json          static OpenAPI schema for importers
 //
 // POST bodies accept arbitrary JSON — objects, arrays, nested structs, anything
@@ -23,8 +23,8 @@
 package main
 
 import (
-	"embed"
 	"database/sql"
+	"embed"
 	"encoding/json"
 	"io"
 	"log"
@@ -42,7 +42,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-//go:embed index.html openapi.json
+//go:embed index.html docs.html openapi.json
 var assets embed.FS
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -71,8 +71,8 @@ var (
 type stats struct {
 	startedAt   time.Time
 	total       atomic.Int64
-	byMethod    sync.Map // method(string) -> *atomic.Int64
-	byStatus    sync.Map // status(int)    -> *atomic.Int64
+	byMethod    sync.Map     // method(string) -> *atomic.Int64
+	byStatus    sync.Map     // status(int)    -> *atomic.Int64
 	lastRequest atomic.Value // time.Time
 
 	// Latency ring buffer (last N request durations in microseconds).
@@ -185,17 +185,17 @@ func (s *stats) snapshot() map[string]any {
 	last, _ := s.lastRequest.Load().(time.Time)
 	totalItems, pubItems, secItems := itemCounts()
 	return map[string]any{
-		"uptime_seconds":  int(time.Since(s.startedAt).Seconds()),
-		"started_at":      s.startedAt.UTC().Format(time.RFC3339),
-		"total_requests":  s.total.Load(),
-		"by_method":       methods,
-		"by_status":       statuses,
-		"last_request":    last.UTC().Format(time.RFC3339),
-		"latency":         s.latencyStats(),
-		"items_total":     totalItems,
-		"items_public":    pubItems,
-		"items_secure":    secItems,
-		"db_size_bytes":   dbSize(),
+		"uptime_seconds": int(time.Since(s.startedAt).Seconds()),
+		"started_at":     s.startedAt.UTC().Format(time.RFC3339),
+		"total_requests": s.total.Load(),
+		"by_method":      methods,
+		"by_status":      statuses,
+		"last_request":   last.UTC().Format(time.RFC3339),
+		"latency":        s.latencyStats(),
+		"items_total":    totalItems,
+		"items_public":   pubItems,
+		"items_secure":   secItems,
+		"db_size_bytes":  dbSize(),
 	}
 }
 
@@ -546,7 +546,11 @@ func listItemHandler(scope string) http.HandlerFunc {
 // createItemHandler builds a create handler for a fixed scope.
 func createItemHandler(scope string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, _ := readBody(r)
+		body, err := readBody(r)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "Could not read request body.")
+			return
+		}
 		if err := validateJSON(body); err != nil {
 			writeError(w, http.StatusBadRequest, "There was an error parsing the body")
 			return
@@ -570,8 +574,13 @@ func routes() http.Handler {
 	mux.HandleFunc("/health", handleHealth)
 	mux.HandleFunc("/stats", handleStats)
 	mux.HandleFunc("/openapi.json", handleOpenAPI)
-	mux.HandleFunc("/docs", handleUI) // no auto-Swagger in Go; alias to the UI
-	mux.HandleFunc("/", handleUI)
+	mux.HandleFunc("GET /docs", func(w http.ResponseWriter, r *http.Request) {
+		data, _ := assets.ReadFile("docs.html")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(data)
+	})
+	mux.HandleFunc("GET /{$}", handleUI)
+	registerLab(mux)
 
 	// /public/items          GET    list   | POST   create
 	// /public/items/{id}     GET    read   | PUT    update | DELETE remove
@@ -638,20 +647,28 @@ func scopeItemHandler(scope string, secure bool) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "Invalid item id in URL.")
 			return
 		}
+		item, found, err := getItem(id)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "db error: "+err.Error())
+			return
+		}
+		if found && item.Scope != scope {
+			writeError(w, http.StatusNotFound, "Item not found.")
+			return
+		}
 		switch r.Method {
 		case http.MethodGet:
-			item, found, err := getItem(id)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, "db error: "+err.Error())
-				return
-			}
 			if !found {
 				writeError(w, http.StatusNotFound, "Item not found.")
 				return
 			}
 			writeJSON(w, http.StatusOK, item)
 		case http.MethodPut:
-			body, _ := readBody(r)
+			body, err := readBody(r)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "Could not read request body.")
+				return
+			}
 			if err := validateJSON(body); err != nil {
 				writeError(w, http.StatusBadRequest, "There was an error parsing the body")
 				return
@@ -699,8 +716,9 @@ func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
 		h.Set("Access-Control-Allow-Origin", "*")
-		h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		h.Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+		h.Set("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS")
+		h.Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, If-None-Match, X-Test-Id")
+		h.Set("Access-Control-Expose-Headers", "ETag, Location, Retry-After")
 		h.Set("Access-Control-Max-Age", "86400") // cache preflight for a day
 
 		// Preflight: respond immediately, don't touch the DB.

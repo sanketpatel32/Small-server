@@ -4,9 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Small-Server · Test Console</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
     /* Layered near-black background; cards elevate above it. */
@@ -298,6 +295,20 @@
   .toast.error { border-color: rgba(255,107,107,0.4); color: var(--danger); }
   .toast.ok { border-color: rgba(76,215,160,0.4); color: var(--accent-2); }
   .toast.warn { border-color: rgba(255,180,84,0.4); color: var(--warn); }
+  body { max-width: 1440px; margin: auto; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 4px; }
+  .scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin: 16px 0 24px; }
+  .scenario-grid button { text-align: left; padding: 14px; white-space: normal; }
+  .scenario-grid small { display: block; color: var(--muted); font-weight: 400; margin-top: 6px; line-height: 1.5; }
+  .lab-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  .lab-grid .card { min-width: 0; }
+  .compose-out { min-height: 180px; max-height: 560px; overflow-wrap: anywhere; }
+  .history-item { width: 100%; text-align: left; color: var(--text); }
+  .h-path { overflow-wrap: anywhere; min-width: 0; }
+  .tabs { flex-wrap: wrap; }
+  @media (max-width: 860px) { .lab-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 480px) { body { padding: 14px; } .compose-grid { grid-template-columns: 1fr; } .toolbar input[type=search] { width: 100%; } .links a { margin: 0 12px 0 0; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
@@ -305,9 +316,10 @@
 <header>
   <div>
     <h1>Small<span class="dot">·</span>Server<span class="qual">test console</span></h1>
-    <div class="sub">Tiny Go + SQLite REST API · full CRUD · accepts any JSON</div>
+    <div class="sub">Your local API playground · store payloads, inspect requests, test failure paths</div>
   </div>
   <div class="links">
+    <a href="/docs">Documentation</a>
     <a href="/openapi.json" target="_blank">OpenAPI</a>
     <a href="/stats" target="_blank">Stats</a>
     <a href="/health" target="_blank">Health</a>
@@ -344,8 +356,8 @@
 
 <!-- Tabs -->
 <div class="tabs">
-  <button class="tab active" data-tab="test">Test</button>
-  <button class="tab" data-tab="compose">Compose</button>
+  <button class="tab active" data-tab="test">Payload storage</button>
+  <button class="tab" data-tab="compose">HTTP test lab</button>
   <span style="margin-left:auto;align-self:center;color:var(--muted);font-size:11px">
     <kbd>Ctrl</kbd>+<kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> search · <kbd>R</kbd> refresh
   </span>
@@ -358,7 +370,7 @@
     <div class="card">
       <h2>Send Payload <span class="badge public">public</span></h2>
       <div class="hint">Paste any valid JSON. Objects, arrays, nested — whatever your webhook sends.</div>
-      <input id="p-raw" placeholder="or type a plain string here" />
+      <input id="p-raw" aria-label="Public plain string payload" placeholder="or type a plain string here" />
       <label for="p-json">JSON payload</label>
       <textarea id="p-json" placeholder='{
   "event": "user.signup",
@@ -377,8 +389,8 @@
       <h2>Send Payload <span class="badge secure">secure</span></h2>
       <div class="hint">Stored under a protected scope — requires your API key.</div>
       <label for="api-key">API Key</label>
-      <input id="api-key" placeholder="secret-key-123" />
-      <input id="s-raw" placeholder="or type a plain string here" style="margin-top:8px" />
+      <input id="api-key" type="password" autocomplete="off" placeholder="secret-key-123" />
+      <input id="s-raw" aria-label="Secure plain string payload" placeholder="or type a plain string here" style="margin-top:8px" />
       <label for="s-json">JSON payload</label>
       <textarea id="s-json" placeholder='{
   "secret": "data",
@@ -417,30 +429,47 @@
 
 <!-- COMPOSE TAB -->
 <div class="tab-pane" id="pane-compose">
+  <h2>Explore HTTP behavior</h2>
+  <p class="hint">Choose a scenario, adjust the request, then send. Lab endpoints do not write to your database.</p>
+  <div id="scenarios" class="scenario-grid"></div>
+  <div class="lab-grid">
   <div class="card">
     <h2>Compose Request</h2>
     <div class="hint">Fire any method at any path on this server. Useful for manual PUT / DELETE / GET-one testing. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to send.</div>
     <div class="compose-grid">
       <label for="c-method" style="margin:0">Method</label>
       <select id="c-method">
-        <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option>
+        <option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option><option>HEAD</option><option>OPTIONS</option>
       </select>
       <label for="c-path" style="margin:0">Path</label>
       <input id="c-path" value="/public/items" placeholder="/public/items/1" />
-      <label for="c-body" style="margin:0">Body (JSON, optional)</label>
+      <label for="c-headers" style="margin:0">Headers (JSON object)</label>
+      <textarea id="c-headers" style="min-height:70px" placeholder='{"X-Test-Id":"demo"}'>{}</textarea>
+      <label for="c-body" style="margin:0">Body (raw, optional)</label>
       <textarea id="c-body" placeholder='{ "key": "value" }' style="min-height:90px"></textarea>
+      <label for="c-timeout" style="margin:0">Timeout (ms)</label>
+      <input id="c-timeout" type="number" min="100" max="60000" value="15000" />
+      <label for="c-expected" style="margin:0">Expected status</label>
+      <input id="c-expected" type="number" min="200" max="599" placeholder="Optional, e.g. 429" />
     </div>
     <div class="btn-row">
-      <button onclick="composeSend()">Send</button>
+      <button id="c-send" onclick="composeSend()">Send request</button>
+      <button id="c-cancel" class="ghost" onclick="cancelCompose()" disabled>Cancel</button>
       <button class="ghost" onclick="document.getElementById('c-body').value=''">Clear body</button>
       <label class="toggle" style="margin-left:auto"><input type="checkbox" id="c-secure" /> send X-API-Key</label>
     </div>
-    <div id="compose-out" class="compose-out" style="display:none"></div>
+    <p class="hint">GET / HEAD omit the body. JSON is sent as typed, including malformed JSON. Redirects follow automatically. API keys stay in memory.</p>
+  </div>
+  <div class="card">
+    <h2>Response inspector</h2>
+    <div id="compose-out" class="compose-out" role="status" aria-live="polite">Send a request to inspect status, timing, body size, and response headers.</div>
+    <div class="btn-row"><button class="ghost" onclick="copyResponse()">Copy response</button><button class="ghost" onclick="composeHistory=[];renderHistory()">Clear history</button></div>
     <div id="compose-history" class="history-list"></div>
+  </div>
   </div>
 </div>
 
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ════════════════════════════════════════════════════════════════════════════
@@ -459,7 +488,8 @@ let composeHistory = []; // [{method, path, body, secure, status, ms, t}]
 function loadPrefs() {
   try {
     const p = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
-    if (p.apiKey != null) document.getElementById('api-key').value = p.apiKey;
+    // Remove keys persisted by older versions; credentials now stay in memory.
+    if ('apiKey' in p) { delete p.apiKey; localStorage.setItem(STORE_KEY, JSON.stringify(p)); }
     if (p.filter) setFilter(p.filter);
     if (p.tab) activateTab(p.tab);
     if (p.autoRefresh) { document.getElementById('auto-refresh').checked = true; toggleAutoRefresh(); }
@@ -470,7 +500,6 @@ function loadPrefs() {
 }
 function savePrefs() {
   const p = {
-    apiKey: API_KEY_INPUT(),
     filter: currentFilter,
     tab: document.querySelector('.tab.active')?.dataset.tab,
     autoRefresh: document.getElementById('auto-refresh').checked,
@@ -478,7 +507,7 @@ function savePrefs() {
     composeMethod: document.getElementById('c-method').value,
     composeSecure: document.getElementById('c-secure').checked,
   };
-  localStorage.setItem(STORE_KEY, JSON.stringify(p));
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(p)); } catch { /* Storage may be disabled. */ }
 }
 
 /* ── Toast ── */
@@ -520,10 +549,10 @@ function fillSample(id) {
 function buildPayload(jsonId, rawId) {
   const raw = document.getElementById(rawId).value.trim();
   const json = document.getElementById(jsonId).value.trim();
-  if (raw && json) return { _error: "Use only one input — either the plain string OR the JSON box, not both." };
-  if (raw) return raw;
-  if (!json) return { _error: "Provide a payload (plain string or JSON)." };
-  try { return JSON.parse(json); } catch (e) { return { _error: "Invalid JSON: " + e.message }; }
+  if (raw && json) return { error: "Use only one input — either the plain string OR the JSON box, not both." };
+  if (raw) return { payload: raw };
+  if (!json) return { error: "Provide a payload (plain string or JSON)." };
+  try { return { payload: JSON.parse(json) }; } catch (e) { return { error: "Invalid JSON: " + e.message }; }
 }
 
 async function api(method, url, { headers = {}, body } = {}) {
@@ -577,8 +606,8 @@ function fmtBytes(n) {
 
 /* ── Create ── */
 async function createPublic() {
-  const payload = buildPayload('p-json', 'p-raw');
-  if (payload._error) return toast(payload._error, 'error');
+  const { payload, error } = buildPayload('p-json', 'p-raw');
+  if (error) return toast(error, 'error');
   try {
     await api('POST', '/public/items', { body: payload });
     clearInput('p-json', 'p-raw');
@@ -590,9 +619,9 @@ async function createPublic() {
 
 async function createSecure() {
   const key = API_KEY_INPUT();
-  const payload = buildPayload('s-json', 's-raw');
+  const { payload, error } = buildPayload('s-json', 's-raw');
   if (!key) return toast('API key is required', 'error');
-  if (payload._error) return toast(payload._error, 'error');
+  if (error) return toast(error, 'error');
   try {
     await api('POST', '/secure/items', { headers: { 'X-API-Key': key }, body: payload });
     clearInput('s-json', 's-raw');
@@ -612,7 +641,7 @@ function renderPayloadHtml(p) {
 }
 
 function relativeTime(iso) {
-  const t = new Date(iso.replace(' ', 'T') + 'Z').getTime();
+  const t = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z').getTime();
   if (isNaN(t)) return iso;
   const sec = Math.floor((Date.now() - t) / 1000);
   if (sec < 5) return 'just now';
@@ -841,75 +870,126 @@ async function refreshStats() {
 }
 
 /* ── Compose ── */
-async function composeSend() {
-  const method = document.getElementById('c-method').value;
-  const path = document.getElementById('c-path').value.trim();
-  const bodyRaw = document.getElementById('c-body').value.trim();
-  const secure = document.getElementById('c-secure').checked;
-  const out = document.getElementById('compose-out');
-  out.style.display = 'block';
-  if (!path) { out.innerHTML = '<span style="color:var(--danger)">Path is required.</span>'; return; }
+const scenarios = [
+  {name:'Inspect a webhook', hint:'Raw body, query values, and headers', method:'POST', path:'/lab/echo?tag=one&tag=two', body:'{"event":"order.created","total":42}', headers:{'Content-Type':'application/json','X-Test-Id':'webhook'}, expected:200},
+  {name:'Rate limiting', hint:'429 with a Retry-After header', path:'/lab/status/429', expected:429},
+  {name:'Server failure', hint:'Exercise your 500 error handling', path:'/lab/status/500', expected:500},
+  {name:'Slow response', hint:'A 2-second delay for loading states', path:'/lab/delay/2000', expected:200},
+  {name:'Client timeout', hint:'Cancel a slow request after 500 ms', path:'/lab/delay/2000', timeout:500},
+  {name:'Redirect', hint:'Follow a 307 to the echo endpoint', path:'/lab/redirect?code=307&to=/lab/echo', expected:200},
+  {name:'Conditional cache', hint:'An ETag match returns an empty 304', path:'/lab/cache', headers:{'If-None-Match':'"small-server-v1"'}, expected:304},
+  {name:'No content', hint:'204 with an empty response body', path:'/lab/status/204', expected:204},
+  {name:'Invalid JSON', hint:'Send a malformed payload to storage', method:'POST', path:'/public/items', body:'{"broken":', expected:400},
+  {name:'Missing API key', hint:'Check the protected scope returns 401', path:'/secure/items', expected:401},
+  {name:'Missing route', hint:'Check unknown paths return 404', path:'/does-not-exist', expected:404},
+  {name:'CORS preflight', hint:'Inspect allowed methods and headers', method:'OPTIONS', path:'/lab/echo', expected:204},
+];
+document.getElementById('scenarios').innerHTML = scenarios.map((s, i) =>
+  `<button class="ghost" onclick="loadScenario(${i})">${escapeHtml(s.name)}<small>${escapeHtml(s.hint)}</small></button>`).join('');
 
-  const headers = {};
-  if (secure) headers['X-API-Key'] = API_KEY_INPUT();
-  let body;
-  if (bodyRaw) {
-    try { body = JSON.parse(bodyRaw); }
-    catch (e) { out.innerHTML = '<span style="color:var(--danger)">Invalid JSON body: ' + escapeHtml(e.message) + '</span>'; return; }
-  }
-
-  const t0 = performance.now();
-  let status = 0, payload = null, errMsg = null;
-  try {
-    const res = await fetch(path, {
-      method,
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-    status = res.status;
-    try { payload = await res.json(); } catch { payload = null; }
-    if (!res.ok && payload && payload.detail) errMsg = payload.detail;
-  } catch (e) {
-    errMsg = e.message;
-  }
-  const ms = Math.round(performance.now() - t0);
-  savePrefs();
-  renderComposeOut({ method, path, status, payload, errMsg, ms });
-  pushHistory({ method, path, body: bodyRaw, secure, status: status || 'ERR', ms });
+function loadScenario(i) {
+  const s = scenarios[i];
+  document.getElementById('c-method').value = s.method || 'GET';
+  document.getElementById('c-path').value = s.path;
+  document.getElementById('c-body').value = s.body || '';
+  document.getElementById('c-headers').value = JSON.stringify(s.headers || {}, null, 2);
+  document.getElementById('c-timeout').value = s.timeout || 15000;
+  document.getElementById('c-expected').value = s.expected || '';
+  document.getElementById('c-secure').checked = false;
+  document.getElementById('c-path').focus();
+  toast('Scenario loaded. Send when ready.');
 }
 
-function renderComposeOut({ method, path, status, payload, errMsg, ms }) {
+let composeController = null;
+let composeCancelled = false;
+let lastResponse = '';
+function cancelCompose() {
+  composeCancelled = true;
+  composeController?.abort();
+}
+
+async function composeSend() {
+  if (composeController) return;
+  const method = document.getElementById('c-method').value;
+  const path = document.getElementById('c-path').value.trim();
+  const bodyRaw = document.getElementById('c-body').value;
+  const headersRaw = document.getElementById('c-headers').value;
+  const secure = document.getElementById('c-secure').checked;
+  const timeout = Number(document.getElementById('c-timeout').value);
+  const expected = document.getElementById('c-expected').value;
+  let url, headers;
+  try {
+    url = new URL(path, location.origin);
+    if (!path.startsWith('/') || path.startsWith('//') || url.origin !== location.origin || url.username || url.password) throw new Error('Use a local path starting with / on this server.');
+    if (!Number.isInteger(timeout) || timeout < 100 || timeout > 60000) throw new Error('Timeout must be 100–60000 ms.');
+    if (expected && (!Number.isInteger(Number(expected)) || Number(expected) < 200 || Number(expected) > 599)) throw new Error('Expected status must be 200–599.');
+    const values = JSON.parse(headersRaw || '{}');
+    if (!values || Array.isArray(values) || typeof values !== 'object' || Object.values(values).some(v => typeof v !== 'string')) throw new Error('Headers must be a JSON object of string values.');
+    headers = new Headers(values);
+    if (bodyRaw && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    if (secure) headers.set('X-API-Key', API_KEY_INPUT());
+  } catch (e) { toast(e.message, 'error'); return; }
+
+  composeController = new AbortController();
+  composeCancelled = false;
+  const controller = composeController;
+  document.getElementById('c-send').disabled = true;
+  document.getElementById('c-cancel').disabled = false;
+  document.getElementById('compose-out').textContent = 'Request in progress…';
+  const timer = setTimeout(() => controller.abort(), timeout);
+  const t0 = performance.now();
+  let status = 0, text = '', errMsg = '', responseHeaders = {}, finalURL = '', redirected = false;
+  try {
+    const res = await fetch(url, {
+      method, headers, signal:controller.signal, cache:'no-store',
+      body: !['GET','HEAD'].includes(method) && bodyRaw ? bodyRaw : undefined,
+    });
+    status = res.status;
+    responseHeaders = Object.fromEntries(res.headers);
+    finalURL = res.url;
+    redirected = res.redirected;
+    text = await res.text();
+  } catch (e) {
+    errMsg = controller.signal.aborted ? (composeCancelled ? 'Request cancelled.' : `Timed out after ${timeout} ms.`) : e.message;
+    status = 0;
+  } finally {
+    clearTimeout(timer);
+    composeController = null;
+    document.getElementById('c-send').disabled = false;
+    document.getElementById('c-cancel').disabled = true;
+  }
+  const ms = Math.round(performance.now() - t0);
+  renderComposeOut({method,path,status,text,errMsg,ms,responseHeaders,expected,finalURL,redirected});
+  // Request credentials and bodies stay out of persistent browser storage.
+  pushHistory({method,path,body:bodyRaw,headers:headersRaw,secure,status:status || 'ERR',ms,timeout,expected});
+}
+
+function renderComposeOut({method,path,status,text,errMsg,ms,responseHeaders,expected,finalURL,redirected}) {
+  let pretty = text || '(empty body)';
+  if (text) { try { pretty = JSON.stringify(JSON.parse(text), null, 2); } catch { /* Plain text or HTML. */ } }
+  const assertion = expected ? (status === Number(expected) ? `PASS · expected ${expected}` : `FAIL · expected ${expected}, received ${status || 'network error'}`) : '';
+  lastResponse = `${status || 'ERR'} ${method} ${path} · ${ms} ms · ${fmtBytes(new TextEncoder().encode(text).length)}\n${assertion}\n` +
+    (redirected ? `Redirected to ${finalURL}\n` : '') +
+    `\n${pretty}\n\nResponse headers\n${JSON.stringify(responseHeaders, null, 2)}` + (errMsg ? `\n\n${errMsg}` : '');
   const out = document.getElementById('compose-out');
-  const klass = 's' + String(status || 'err')[0];
-  const bar = Math.min(80, Math.max(4, ms * 2));      // visual timing bar
-  const pretty = payload === null ? '(empty body)' : JSON.stringify(payload, null, 2);
-  const errLine = errMsg ? `\n\n<span style="color:var(--danger)">⚠ ${escapeHtml(errMsg)}</span>` : '';
-  out.innerHTML = `<span class="status-pill ${klass}">${status || 'ERR'}</span>` +
-    `<span style="color:var(--muted);font-size:11px">${escapeHtml(method)} ${escapeHtml(path)} · ${ms}ms</span>` +
-    `<span class="timing-bar" style="width:${bar}px"></span>\n\n` +
-    `<span style="color:var(--text)">${highlightJson(pretty)}</span>${errLine}`;
+  out.innerHTML = `<span class="status-pill s${status ? String(status)[0] : '5'}">${status || 'ERR'}</span>` + escapeHtml(lastResponse.slice(String(status || 'ERR').length));
+}
+
+async function copyResponse() {
+  if (!lastResponse) return toast('Send a request first.', 'warn');
+  try { await navigator.clipboard.writeText(lastResponse); toast('Response copied.'); }
+  catch { toast('Clipboard unavailable. Select and copy the response text.', 'error'); }
 }
 
 function pushHistory(entry) {
-  entry.t = Date.now();
   composeHistory.unshift(entry);
-  if (composeHistory.length > 10) composeHistory.length = 10;
+  if (composeHistory.length > 20) composeHistory.length = 20;
   renderHistory();
 }
 function renderHistory() {
   const el = document.getElementById('compose-history');
-  if (!composeHistory.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Recent (click to replay)</div>' +
-    composeHistory.map((h, i) => {
-      const klass = 's' + String(h.status)[0];
-      return `<div class="history-item" onclick="replayHistory(${i})" title="click to replay">` +
-        `<span class="h-method">${escapeHtml(h.method)}</span>` +
-        `<span class="h-path">${escapeHtml(h.path)}</span>` +
-        `<span class="status-pill ${klass}" style="font-size:10px">${h.status}</span>` +
-        `<span class="h-status">${h.ms}ms</span>` +
-        `<span class="h-x" onclick="event.stopPropagation();composeHistory.splice(${i},1);renderHistory();">✕</span>` +
-        `</div>`;
-    }).join('');
+  el.innerHTML = '<div class="hint">Recent requests · kept only for this page session · select to load</div>' + composeHistory.map((h, i) =>
+    `<button class="history-item ghost" onclick="replayHistory(${i})"><span class="h-method">${escapeHtml(h.method)}</span><span class="h-path">${escapeHtml(h.path)}</span><span class="h-status">${escapeHtml(h.status)} · ${h.ms}ms</span></button>`).join('');
 }
 function replayHistory(i) {
   const h = composeHistory[i];
@@ -917,6 +997,9 @@ function replayHistory(i) {
   document.getElementById('c-method').value = h.method;
   document.getElementById('c-path').value = h.path;
   document.getElementById('c-body').value = h.body || '';
+  document.getElementById('c-headers').value = h.headers || '{}';
+  document.getElementById('c-timeout').value = h.timeout;
+  document.getElementById('c-expected').value = h.expected;
   document.getElementById('c-secure').checked = !!h.secure;
   toast('Loaded — press Send', 'ok');
 }
@@ -932,7 +1015,7 @@ document.addEventListener('keydown', (e) => {
     if (tab === 'compose') composeSend();
     else if (tab === 'test') {
       // submit the focused-or-last-used scope; default to public
-      (document.activeElement?.closest('#pane-test .card.secure-btn') ? createSecure() : createPublic());
+      (document.activeElement?.closest('.card')?.querySelector('#s-json') ? createSecure() : createPublic());
     }
     return;
   }

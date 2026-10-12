@@ -11,8 +11,8 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 
-# App source (main.go + embedded index.html + openapi.json).
-COPY main.go index.html openapi.json ./
+# App source and embedded console, guide, and API schema.
+COPY main.go lab.go index.html docs.html openapi.json ./
 
 # Static build: CGO off (modernc.org/sqlite is pure Go), stripped, trimmed.
 ENV CGO_ENABLED=0 GOOS=linux
