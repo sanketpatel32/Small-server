@@ -24,7 +24,7 @@ primary_region = 'ams'
   auto_start_machines = true
   min_machines_running = 0
 
-  # Give uvicorn time to bind on cold start before Fly declares the port dead.
+  # Allow the Go server to initialize SQLite before checking readiness.
   [[http_service.checks]]
     interval = '10s'
     timeout = '5s'
