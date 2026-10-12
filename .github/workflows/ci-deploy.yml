@@ -1,0 +1,60 @@
+name: Test and deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Tests and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - name: Go formatting
+        run: test -z "$(gofmt -l *.go)"
+      - name: Go regression tests
+        run: go test ./...
+      - name: Go vet
+        run: go vet ./...
+      - name: Console regression tests
+        run: node --test ui_test.cjs
+      - name: Build server
+        env:
+          CGO_ENABLED: '0'
+        run: go build -o /tmp/small-server .
+
+  deploy:
+    name: Deploy to Fly
+    needs: checks
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: production-fly
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1
+        with:
+          version: v0.4.115
+      - name: Deploy verified commit
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy -a small-server --remote-only --ha=false --yes
+      - name: Check deployed health and API schema
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors https://small-server.fly.dev/health
+          curl --fail --silent --show-error https://small-server.fly.dev/openapi.json > /tmp/openapi.json
+          python3 -c 'import json; json.load(open("/tmp/openapi.json"))'

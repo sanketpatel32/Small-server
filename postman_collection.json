@@ -71,7 +71,7 @@
                 "docs"
               ]
             },
-            "description": "Interactive Swagger UI — open in a browser."
+            "description": "Interactive Swagger UI \u2014 open in a browser."
           }
         },
         {
@@ -403,7 +403,7 @@
                 "250"
               ]
             },
-            "description": "Wait 250 milliseconds, then return {delay_ms,status}. Delay range is 0–10000 ms."
+            "description": "Wait 250 milliseconds, then return {delay_ms,status}. Delay range is 0\u201310000 ms."
           },
           "response": []
         },
@@ -604,7 +604,7 @@
                 "items"
               ]
             },
-            "description": "Store ANY valid JSON payload — objects, arrays, nested structs, strings, numbers, booleans, or null. Stored verbatim and echoed back. No auth required."
+            "description": "Store ANY valid JSON payload \u2014 objects, arrays, nested structs, strings, numbers, booleans, or null. Stored verbatim and echoed back. No auth required."
           },
           "response": [
             {
@@ -1316,6 +1316,141 @@
           }
         ]
       }
+    },
+    {
+      "name": "Claire mock gateways",
+      "item": [
+        {
+          "name": "Test crm",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": "{{base_url}}/secure/gateways/crm",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"create_record\",\n  \"record_type\": \"contact\",\n  \"fields\": {\n    \"name\": \"Test customer\",\n    \"email\": \"test@example.com\"\n  }\n}"
+            },
+            "description": "Operations: create_record (fields), find_record (match), update_record (record_id, fields), add_note (record_id, note). record_type: contact, company, deal, case, custom. Returns root id/name for body.id/body.name mappings."
+          }
+        },
+        {
+          "name": "Test calendar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": "{{base_url}}/secure/gateways/calendar",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"create_booking\",\n  \"calendar_id\": \"demo\",\n  \"timezone\": \"UTC\",\n  \"start_at\": \"2030-01-10T10:00:00Z\",\n  \"end_at\": \"2030-01-10T10:30:00Z\",\n  \"title\": \"Test appointment\",\n  \"attendee_email\": \"test@example.com\"\n}"
+            },
+            "description": "Operations: check_availability, create_booking, reschedule_booking, cancel_booking. calendar_id/timezone required. RFC3339 start_at/end_at required except cancel. reschedule/cancel require event_id. Create requires title/attendee_email. Overlaps return 409."
+          }
+        },
+        {
+          "name": "Test business",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": "{{base_url}}/secure/gateways/business",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"create_ticket\",\n  \"description\": \"Test support request\",\n  \"inputs\": {\n    \"subject\": \"Demo\"\n  }\n}"
+            },
+            "description": "Stores a mock accepted request. operation is a lowercase identifier; description required; inputs is an object."
+          }
+        },
+        {
+          "name": "Test database",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": "{{base_url}}/secure/gateways/database",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"create\",\n  \"resource\": \"customers\",\n  \"values\": {\n    \"name\": \"Test customer\",\n    \"active\": true\n  }\n}"
+            },
+            "description": "Operations: read, create, update, delete. resource is a lowercase sandbox identifier, not SQL. Flat equality filters; values required for create/update; nonempty filters required for update/delete; read limit 1\u2013100 (default 10)."
+          }
+        },
+        {
+          "name": "Test voice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": "{{base_url}}/secure/gateways/voice",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analysis\": \"summary\",\n  \"transcript\": \"Hello, I would like to book an appointment.\",\n  \"language\": \"en\"\n}"
+            },
+            "description": "analysis: summary, sentiment, intent, quality, custom. transcript/language required; instructions required for quality/custom. Simulated text output; no AI/audio provider or timestamps."
+          }
+        }
+      ]
     }
   ]
 }

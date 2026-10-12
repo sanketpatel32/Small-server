@@ -62,17 +62,17 @@ Both scripts auto-detect Go and fall back to a prebuilt binary if present.
 # env vars (all optional, these are the defaults)
 PORT=8795
 DB_PATH=./data.db
-API_KEY=secret-key-123
+API_KEY=choose-a-strong-key
 ```
 
 ---
 
 ## 🔑 Auth
 
-Secure routes are protected by a static API key sent via header:
+Only `/secure/*` routes use the API key. Keep it on a backend or server-side proxy; never put it in a browser bundle. A private route sends it in this header:
 
-```
-X-API-Key: secret-key-123
+```bash
+X-API-Key: $SMALL_SERVER_API_KEY
 ```
 
 Change it any time via an environment variable:
@@ -133,7 +133,52 @@ The status endpoint accepts any code from 200 to 599 and returns `{"status":N,"m
 
 The delay endpoint accepts an integer from 0 to 10,000 milliseconds and returns `{"delay_ms":N,"status":"ok"}` after the wait. The wait is cancellable when the client disconnects. Redirects default to `/lab/echo` and status 302; use `to` for a local absolute path and `code` for 301, 302, 303, 307, or 308. External and protocol-relative destinations are rejected. The cache endpoint returns a fixed ETag (`"small-server-v1"`) and `Cache-Control: public, max-age=60`; matching `If-None-Match` (including `*`) returns 304.
 
-The workspace has three sections: **Save data** for messages or JSON, **Try a test** for ready-to-run examples, and **Files** for private uploads. Use **Access key** at the top once to unlock private actions. Advanced request settings, response headers, file keys, and server activity are available in expandable sections. Recent tests stay in memory only until the page is reloaded.
+The workspace has sections for **Save data**, **Try a test**, **Use API**, and **Files**. Use **Access key** at the top once to unlock private actions. Advanced request settings, response headers, file keys, and server activity are available in expandable sections. Recent tests stay in memory only until the page is reloaded.
+
+### Use API from the console
+
+Select **Use API** to browse routes from the OpenAPI schema, see the selected endpoint's full URL, copy that URL, and copy ready-to-run JavaScript or cURL. Examples include the selected item ID and JSON sample body, or the filename and server-side file bytes for uploads. The server-hosted API base URL is `https://small-server.fly.dev`; local development uses `http://localhost:8795`.
+
+Public routes can be called directly from browser JavaScript, but anyone who can reach the server can read and change `/public/*` data. Keep private `/secure/*` calls behind a server-side endpoint or backend proxy:
+
+```js
+// Browser: public data only
+const response = await fetch("https://small-server.fly.dev/public/items");
+const items = await response.json();
+
+// Server-side JavaScript: private route
+const secureResponse = await fetch("https://small-server.fly.dev/secure/items", {
+  headers: { "X-API-Key": process.env.SMALL_SERVER_API_KEY }
+});
+```
+
+Never bundle `SMALL_SERVER_API_KEY` into React or other browser JavaScript. Keep R2 access keys and secret keys server-side too. Use API snippets show environment-variable placeholders; set the key in the server or CI environment.
+
+For a raw upload from a shell, send file bytes as the request body (not multipart) and use the filename query parameter:
+
+```bash
+curl -X POST 'https://small-server.fly.dev/secure/uploads?filename=example.txt' \
+  -H "X-API-Key: $SMALL_SERVER_API_KEY" \
+  -H 'Content-Type: application/octet-stream' \
+  --data-binary @example.txt
+```
+
+In the console, select an endpoint and use **Copy URL** or copy its JavaScript/cURL example. For raw uploads, enter a local filename; the Node.js example reads that file.
+
+### Browser CORS
+
+The server allows any origin (`Access-Control-Allow-Origin: *`) and permits `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE`, and `OPTIONS`. Browser requests may use `Content-Type`, `X-API-Key`, `If-None-Match`, `X-Test-Id`, and `Idempotency-Key`. Responses expose `ETag`, `Location`, `Retry-After`, `Content-Disposition`, `Content-Length`, `Cache-Control`, and `Idempotency-Replayed` to browser JavaScript.
+
+A JSON content type or custom request header may trigger a browser preflight:
+
+```bash
+curl -i -X OPTIONS 'https://small-server.fly.dev/public/items' \
+  -H 'Origin: https://your-app.example' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: content-type,x-test-id'
+```
+
+Wildcard origins do not support cookie-based `credentials: "include"`. Do not use `mode: "no-cors"`: the browser hides the response from JavaScript. Native apps, mobile clients, and backends are not restricted by browser CORS.
 
 > 🔒 Secure routes require header `X-API-Key: secret-key-123` (override via `API_KEY` env var).
 > 🔁 **Scope isolation:** an `id` only resolves within its own scope — `/public/items/5` won't return a secure item even if id 5 exists there.
@@ -223,7 +268,7 @@ curl -X DELETE http://localhost:8795/public/items
 ```bash
 curl -X POST http://localhost:8795/secure/items \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: secret-key-123" \
+  -H "X-API-Key: $SMALL_SERVER_API_KEY" \
   -d '{"secret":"data","ts":1690000000}'
 ```
 
@@ -299,7 +344,7 @@ Cloudflare R2 Standard currently includes 10 GB-month storage, 1 million Class A
 
 ## 📮 Postman / Bruno
 
-`postman_collection.json` is a ready-to-import collection (v2.1 format) with Meta, HTTP Lab, Public, Secure, and Uploads folders. Only the Uploads folder has a folder-level `X-API-Key`, set to the development default `secret-key-123`; update that folder auth for a different API key. Secure CRUD requests keep their own key headers, while public and missing-key examples remain unauthenticated.
+`postman_collection.json` is a ready-to-import collection (v2.1 format) with Meta, HTTP Lab, Public, Secure, and Uploads folders. Only the Uploads folder has folder-level API-key auth. Secure CRUD requests keep their own key headers, while public requests remain unauthenticated.
 
 ### Use it (zero config)
 
@@ -402,3 +447,13 @@ node --test ui_test.cjs
 ```
 
 Go tests use temporary SQLite files and cover scope isolation, JSON payloads, lab parameters, redaction, caching, cancellation, HEAD, and CORS. The optional Node check uses the built-in test runner to cover console validation, raw requests, timeout/cancel behavior, response escaping, history, and null payloads. No frontend packages are needed. Restart or rebuild the app after changing embedded HTML or OpenAPI.
+
+### Claire workflow test gateways
+
+The five authenticated POST endpoints under /secure/gateways/ are crm, calendar, business, database, and voice. Select them in Use API for examples and supported operations. They match the Claire integration blocks from the T3 thread. These are mocks using shared synthetic data persisted in SQLite; no real CRM, calendar, business tool, external database, AI, or audio service is called. CRM returns root id; calendar returns event_id; voice uses analysis. Preserve Idempotency-Key across retries: successful responses replay after restart, changed input with the same key returns 409. Body/record limit: 64 KiB; dataset limit: 1000 records. Database updates/deletes require filters; overlapping bookings return 409.
+
+Import the [hosted Postman collection](https://small-server.fly.dev/postman_collection.json).
+
+### Automatic deployment
+
+[GitHub Actions](https://github.com/sanketpatel32/Small-server/actions) checks Go formatting, regression tests, vet, Node console tests, and the server build on pull requests and pushes. A successful push to `main` deploys to Fly and checks health/schema. Manual runs can deploy `main` too. The app-scoped `FLY_API_TOKEN` is stored in GitHub Actions secrets, expires after one year, and must be renewed before expiry. Application secrets remain in Fly.

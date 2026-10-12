@@ -42,7 +42,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-//go:embed index.html docs.html openapi.json
+//go:embed index.html docs.html openapi.json postman_collection.json
 var assets embed.FS
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -242,6 +242,10 @@ func openDB() (*sql.DB, error) {
 		scope      TEXT    NOT NULL DEFAULT 'public',
 		created_at TEXT    NOT NULL DEFAULT (datetime('now'))
 	);`); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := initGatewaySchema(conn); err != nil {
 		conn.Close()
 		return nil, err
 	}
@@ -574,6 +578,11 @@ func routes() http.Handler {
 	mux.HandleFunc("/health", handleHealth)
 	mux.HandleFunc("/stats", handleStats)
 	mux.HandleFunc("/openapi.json", handleOpenAPI)
+	mux.HandleFunc("GET /postman_collection.json", func(w http.ResponseWriter, r *http.Request) {
+		data, _ := assets.ReadFile("postman_collection.json")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
+	})
 	mux.HandleFunc("GET /docs", func(w http.ResponseWriter, r *http.Request) {
 		data, _ := assets.ReadFile("docs.html")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -582,6 +591,7 @@ func routes() http.Handler {
 	mux.HandleFunc("GET /{$}", handleUI)
 	registerLab(mux)
 	registerUploads(mux, objectStorage)
+	registerGateways(mux)
 
 	// /public/items          GET    list   | POST   create
 	// /public/items/{id}     GET    read   | PUT    update | DELETE remove
@@ -718,8 +728,8 @@ func corsMiddleware(next http.Handler) http.Handler {
 		h := w.Header()
 		h.Set("Access-Control-Allow-Origin", "*")
 		h.Set("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS")
-		h.Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, If-None-Match, X-Test-Id")
-		h.Set("Access-Control-Expose-Headers", "ETag, Location, Retry-After")
+		h.Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key, If-None-Match, X-Test-Id, Idempotency-Key")
+		h.Set("Access-Control-Expose-Headers", "ETag, Location, Retry-After, Content-Disposition, Content-Length, Cache-Control, Idempotency-Replayed")
 		h.Set("Access-Control-Max-Age", "86400") // cache preflight for a day
 
 		// Preflight: respond immediately, don't touch the DB.

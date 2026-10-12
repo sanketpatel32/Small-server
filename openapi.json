@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Small-Server",
-    "version": "1.3.0",
-    "description": "A tiny REST API testing server — full CRUD on any JSON payload, SQLite-backed. Built with Go. Includes public HTTP lab endpoints for echo, status, delay, redirect, and cache testing. Only /secure/* routes require X-API-Key authentication."
+    "version": "1.4.0",
+    "description": "A tiny REST API testing server \u2014 full CRUD on any JSON payload, SQLite-backed. Built with Go. Includes public HTTP lab endpoints for echo, status, delay, redirect, and cache testing. Only /secure/* routes require X-API-Key authentication."
   },
   "components": {
     "securitySchemes": {
@@ -393,13 +393,13 @@
         "tags": [
           "public"
         ],
-        "summary": "Create — store ANY JSON payload (no auth)",
+        "summary": "Create \u2014 store ANY JSON payload (no auth)",
         "requestBody": {
           "required": false,
           "content": {
             "application/json": {
               "schema": {
-                "description": "Any valid JSON — object, array, string, number, boolean, or null"
+                "description": "Any valid JSON \u2014 object, array, string, number, boolean, or null"
               }
             }
           }
@@ -421,7 +421,7 @@
         "tags": [
           "public"
         ],
-        "summary": "Clear all — delete every public item",
+        "summary": "Clear all \u2014 delete every public item",
         "responses": {
           "200": {
             "description": "cleared",
@@ -479,13 +479,13 @@
         "tags": [
           "public"
         ],
-        "summary": "Update — replace the payload of a public item",
+        "summary": "Update \u2014 replace the payload of a public item",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "description": "Any valid JSON — replaces the existing payload"
+                "description": "Any valid JSON \u2014 replaces the existing payload"
               }
             }
           }
@@ -576,7 +576,7 @@
         "tags": [
           "secure"
         ],
-        "summary": "Create — store ANY JSON payload",
+        "summary": "Create \u2014 store ANY JSON payload",
         "security": [
           {
             "ApiKeyAuth": []
@@ -612,7 +612,7 @@
         "tags": [
           "secure"
         ],
-        "summary": "Clear all — delete every secure item",
+        "summary": "Clear all \u2014 delete every secure item",
         "security": [
           {
             "ApiKeyAuth": []
@@ -686,7 +686,7 @@
         "tags": [
           "secure"
         ],
-        "summary": "Update — replace the payload of a secure item",
+        "summary": "Update \u2014 replace the payload of a secure item",
         "security": [
           {
             "ApiKeyAuth": []
@@ -697,7 +697,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "description": "Any valid JSON — replaces the existing payload"
+                "description": "Any valid JSON \u2014 replaces the existing payload"
               }
             }
           }
@@ -940,7 +940,7 @@
           "name": "code",
           "in": "path",
           "required": true,
-          "description": "HTTP status code to return (200–599).",
+          "description": "HTTP status code to return (200\u2013599).",
           "schema": {
             "type": "integer",
             "minimum": 200,
@@ -1006,7 +1006,7 @@
           "name": "ms",
           "in": "path",
           "required": true,
-          "description": "Delay in milliseconds (0–10,000).",
+          "description": "Delay in milliseconds (0\u201310,000).",
           "schema": {
             "type": "integer",
             "minimum": 0,
@@ -1576,6 +1576,343 @@
             "ApiKeyAuth": []
           }
         ]
+      }
+    },
+    "/secure/gateways/crm": {
+      "post": {
+        "tags": [
+          "Claire mock gateways"
+        ],
+        "summary": "Test crm gateway",
+        "description": "Operations: create_record (fields), find_record (match), update_record (record_id, fields), add_note (record_id, note). record_type: contact, company, deal, case, custom. Returns root id/name for body.id/body.name mappings. Mock only, no real provider. Shared persistent SQLite data. Responses include mock:true. Body/record max 64 KiB; dataset max 1000 records. Successful Idempotency-Key requests replay after restart; changed input with same key returns 409.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "operation": "create_record",
+                "record_type": "contact",
+                "fields": {
+                  "name": "Test customer",
+                  "email": "test@example.com"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid key"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Overlap, full dataset, or idempotency conflict"
+          },
+          "413": {
+            "description": "Too large"
+          },
+          "500": {
+            "description": "Database error"
+          }
+        }
+      }
+    },
+    "/secure/gateways/calendar": {
+      "post": {
+        "tags": [
+          "Claire mock gateways"
+        ],
+        "summary": "Test calendar gateway",
+        "description": "Operations: check_availability, create_booking, reschedule_booking, cancel_booking. calendar_id/timezone required. RFC3339 start_at/end_at required except cancel. reschedule/cancel require event_id. Create requires title/attendee_email. Overlaps return 409. Mock only, no real provider. Shared persistent SQLite data. Responses include mock:true. Body/record max 64 KiB; dataset max 1000 records. Successful Idempotency-Key requests replay after restart; changed input with same key returns 409.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "operation": "create_booking",
+                "calendar_id": "demo",
+                "timezone": "UTC",
+                "start_at": "2030-01-10T10:00:00Z",
+                "end_at": "2030-01-10T10:30:00Z",
+                "title": "Test appointment",
+                "attendee_email": "test@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid key"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Overlap, full dataset, or idempotency conflict"
+          },
+          "413": {
+            "description": "Too large"
+          },
+          "500": {
+            "description": "Database error"
+          }
+        }
+      }
+    },
+    "/secure/gateways/business": {
+      "post": {
+        "tags": [
+          "Claire mock gateways"
+        ],
+        "summary": "Test business gateway",
+        "description": "Stores a mock accepted request. operation is a lowercase identifier; description required; inputs is an object. Mock only, no real provider. Shared persistent SQLite data. Responses include mock:true. Body/record max 64 KiB; dataset max 1000 records. Successful Idempotency-Key requests replay after restart; changed input with same key returns 409.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "operation": "create_ticket",
+                "description": "Test support request",
+                "inputs": {
+                  "subject": "Demo"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid key"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Overlap, full dataset, or idempotency conflict"
+          },
+          "413": {
+            "description": "Too large"
+          },
+          "500": {
+            "description": "Database error"
+          }
+        }
+      }
+    },
+    "/secure/gateways/database": {
+      "post": {
+        "tags": [
+          "Claire mock gateways"
+        ],
+        "summary": "Test database gateway",
+        "description": "Operations: read, create, update, delete. resource is a lowercase sandbox identifier, not SQL. Flat equality filters; values required for create/update; nonempty filters required for update/delete; read limit 1\u2013100 (default 10). Mock only, no real provider. Shared persistent SQLite data. Responses include mock:true. Body/record max 64 KiB; dataset max 1000 records. Successful Idempotency-Key requests replay after restart; changed input with same key returns 409.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "operation": "create",
+                "resource": "customers",
+                "values": {
+                  "name": "Test customer",
+                  "active": true
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid key"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Overlap, full dataset, or idempotency conflict"
+          },
+          "413": {
+            "description": "Too large"
+          },
+          "500": {
+            "description": "Database error"
+          }
+        }
+      }
+    },
+    "/secure/gateways/voice": {
+      "post": {
+        "tags": [
+          "Claire mock gateways"
+        ],
+        "summary": "Test voice gateway",
+        "description": "analysis: summary, sentiment, intent, quality, custom. transcript/language required; instructions required for quality/custom. Simulated text output; no AI/audio provider or timestamps. Mock only, no real provider. Shared persistent SQLite data. Responses include mock:true. Body/record max 64 KiB; dataset max 1000 records. Successful Idempotency-Key requests replay after restart; changed input with same key returns 409.",
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              },
+              "example": {
+                "analysis": "summary",
+                "transcript": "Hello, I would like to book an appointment.",
+                "language": "en"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid key"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "409": {
+            "description": "Overlap, full dataset, or idempotency conflict"
+          },
+          "413": {
+            "description": "Too large"
+          },
+          "500": {
+            "description": "Database error"
+          }
+        }
       }
     }
   }

@@ -8,7 +8,7 @@
 </style>
 </head>
 <body><main>
-<nav><a href="/">← Test console</a><a href="/openapi.json">OpenAPI schema</a><a href="#storage">Storage</a><a href="#lab">HTTP lab</a><a href="#uploads">R2 uploads</a><a href="#recipes">Test recipes</a></nav>
+<nav><a href="/">← Test console</a><a href="/openapi.json">OpenAPI schema</a><a href="#storage">Storage</a><a href="#lab">HTTP lab</a><a href="#use-api">Use API</a><a href="#cors">Browser CORS</a><a href="#uploads">R2 uploads</a><a href="#ci">CI and deploy</a><a href="#recipes">Test recipes</a></nav>
 <h1>A sandbox for your HTTP clients.</h1>
 <p>Store webhook payloads, inspect what your client sends, and exercise error handling. Open the HTTP test lab in the console for ready-to-run scenarios and a response inspector.</p>
 <div class="note"><p>Only <code>/secure/*</code> endpoints require <code>X-API-Key</code>. Public CRUD, health, telemetry, the UI, docs, and HTTP lab routes do not require a key. Set a strong <code>API_KEY</code> before sharing the server. Use synthetic test data.</p></div>
@@ -34,6 +34,26 @@
 <tr><td><code>/lab/cache</code></td><td>Returns ETag: "small-server-v1" and Cache-Control: public, max-age=60. A matching If-None-Match (including weak tags or *) returns 304.</td></tr>
 </tbody></table></div>
 <p>Invalid status, delay, or redirect parameters return 400. <code>/health</code> reports availability; <code>/stats</code> reports request counters, latency, and item counts. Telemetry resets on restart and includes console polling.</p></section>
+<section id="use-api"><h2>Use API from the console</h2>
+<p>Choose <b>Use API</b> to browse the endpoint catalog from <code>/openapi.json</code>, inspect the complete URL, copy the URL, or copy a JavaScript or cURL request. Snippets include the selected route and item ID, a JSON sample body, or the filename and raw <code>File</code> body for uploads. The deployed base URL is <code>https://small-server.fly.dev</code>; local development uses <code>http://localhost:8795</code>.</p>
+<p>Public routes can be called from frontend JavaScript. Anyone who can reach this server can also read and change data in <code>/public/*</code>, so treat public-scope data as public. Keep <code>/secure/*</code> calls in a backend or server-side proxy:</p>
+<pre>// Browser: public data only
+const response = await fetch("https://small-server.fly.dev/public/items");
+const items = await response.json();
+
+// Server-side JavaScript: private route
+const secureResponse = await fetch("https://small-server.fly.dev/secure/items", {
+  headers: { "X-API-Key": process.env.SMALL_SERVER_API_KEY }
+});</pre>
+<p>Never bundle <code>SMALL_SERVER_API_KEY</code> into React or other browser JavaScript. R2 access keys and secret keys must also stay server-side. Copy the selected endpoint URL or its ready-to-copy snippet in the console; for a raw upload, enter a local filename; the Node.js snippet reads its bytes with the filename as a query parameter, not multipart data.</p></section>
+<section id="cors"><h2>Browser CORS</h2>
+<p>The server allows <code>Access-Control-Allow-Origin: *</code>, methods <code>GET</code>, <code>HEAD</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>, and <code>OPTIONS</code>, and request headers <code>Content-Type</code>, <code>X-API-Key</code>, <code>If-None-Match</code>, <code>X-Test-Id</code>, and <code>Idempotency-Key</code>. Browser code can read the response headers <code>ETag</code>, <code>Location</code>, <code>Retry-After</code>, <code>Content-Disposition</code>, <code>Content-Length</code>, <code>Cache-Control</code>, and <code>Idempotency-Replayed</code>.</p>
+<p>A JSON content type or custom request header can trigger a browser preflight. This example checks the public items route:</p>
+<pre>curl -i -X OPTIONS 'https://small-server.fly.dev/public/items' \
+  -H 'Origin: https://your-app.example' \
+  -H 'Access-Control-Request-Method: POST' \
+  -H 'Access-Control-Request-Headers: content-type,x-test-id'</pre>
+<p>Wildcard origins do not support cookie-based <code>credentials: "include"</code>. Do not use <code>mode: "no-cors"</code>; the browser hides the response from JavaScript. Native and mobile apps and backend clients are not restricted by browser CORS. Do not send the private API key from browser code.</p></section>
 <section id="uploads"><h2>Private Cloudflare R2 uploads</h2>
 <p>R2 is optional. Only <code>/secure/*</code> upload routes require <code>X-API-Key</code>. Create an R2 bucket and an API token with Object Read &amp; Write permission scoped to the bucket. Keep the bucket private: access is server-side, so a public bucket or bucket CORS configuration is not needed. Cloudflare shows the secret access key once; save the ID and secret in the ignored local <code>.env.r2</code> file. See <a href="https://developers.cloudflare.com/r2/api/tokens/">Cloudflare token setup</a>.</p>
 <pre>R2_ENDPOINT=https://&lt;account-id&gt;.r2.cloudflarestorage.com
@@ -64,8 +84,11 @@ curl -i http://localhost:8795/lab/cache \
 curl -i http://localhost:8795/secure/items -H "X-API-Key: YOUR-API-KEY"</pre>
 <p>In the console, load a scenario, set an expected status, and send. PASS/FAIL checks the final HTTP status only. For redirects, use curl without <code>-L</code> to inspect the initial Location header. Custom request headers use a JSON object of string values; the browser controls restricted headers such as Host and Cookie.</p>
 <p>History keeps the last 20 requests in memory and disappears on reload. Selecting a history entry loads it for review; press Send to execute. API keys are held in memory. Copy response exports the response currently shown.</p></section>
+<section id="ci"><h2>CI and deployment</h2>
+<p>The <a href="https://github.com/sanketpatel32/Small-server/actions">GitHub Actions runs</a> start for pull requests, pushes to <code>main</code>, and manual dispatch. They check Go formatting, tests, vet, build, and <code>node --test ui_test.cjs</code>. Deployment runs only for a push to <code>main</code> or a manual run after those checks pass.</p>
+<p>Fly deployment uses the app-scoped Fly token stored as the GitHub Actions secret <code>FLY_API_TOKEN</code>, Fly CI action version <code>v0.4.115</code>, remote build, one-machine mode, and a post-deploy health smoke check. In-progress deployments are not canceled by a newer run. The token expires after one year; replace the <code>FLY_API_TOKEN</code> GitHub secret before it expires.</p></section>
 <section><h2>Run and verify</h2><pre>go run .
 go test ./...
 go vet ./...
 go build .</pre><p>Configuration: <code>PORT=8795</code>, <code>DB_PATH=./data.db</code>, and <code>API_KEY</code>. Changes to the embedded console, guide, or OpenAPI require restarting <code>go run</code> or rebuilding the binary. The README covers Windows, Docker, and Fly deployment. Import the repository's Postman collection to use the same lab outside the browser.</p></section>
-</main></body></html>
+<section id="gateways"><h2>Claire workflow test gateways</h2><p>The five authenticated POST endpoints under /secure/gateways/ are crm, calendar, business, database, and voice. Select them in Use API for examples and supported operations. They match the Claire integration blocks from the T3 thread. These are mocks using shared synthetic data persisted in SQLite; no real CRM, calendar, business tool, external database, AI, or audio service is called. CRM returns root id; calendar returns event_id; voice uses analysis. Preserve Idempotency-Key across retries: successful responses replay after restart, changed input with the same key returns 409. Body/record limit: 64 KiB; dataset limit: 1000 records. Database updates/deletes require filters; overlapping bookings return 409.</p><p><a href="/#api">Copy examples</a> · <a href="/openapi.json">Full operations</a> · <a href="/postman_collection.json">Postman collection</a></p></section></main></body></html>

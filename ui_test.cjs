@@ -198,3 +198,23 @@ test('editing keeps JSON types and ordinary messages instead of encoding everyth
     assert.equal(sent,expected);
   }
 });
+
+test('API examples protect secrets, validate paths, and support raw uploads and gateway retries', () => {
+ const ui = consoleUI(async () => new Response('{}'));
+ ui.get('api-key').value = 'DO_NOT_EXPORT';
+ const op = {method:'POST',path:'/secure/gateways/crm',requestBody:{content:{'application/json':{}}}};
+ const example = ui.run(`buildApiExamples(${JSON.stringify(op)}, '/secure/gateways/crm', '{"operation":"create_record"}', '')`);
+ assert.match(example.javascript, /process.env.SMALL_SERVER_API_KEY/);
+ assert.match(example.javascript, /Idempotency-Key/);
+ assert.ok(!JSON.stringify(example).includes('DO_NOT_EXPORT'));
+ new vm.Script(`(async () => { ${example.javascript} })`);
+ assert.match(example.curl, /\\\n  -H/);
+ for (const path of ['//evil.example','/\\evil.example','/public/items/{id}']) assert.throws(() => ui.run(`buildApiExamples({method:'GET'}, ${JSON.stringify(path)}, '', '')`));
+ const upload=ui.run(`buildApiExamples({method:'POST',path:'/secure/uploads'}, '/secure/uploads', '', 'example.txt')`);
+ assert.match(upload.javascript, /await readFile\("example.txt"\)/);
+ assert.match(upload.curl, /--data-binary '@example.txt'/);
+ assert.match(upload.url, /filename=example.txt/);
+ new vm.Script(`(async () => { ${upload.javascript.replace(/^import.*\n/, '')} })`);
+ const head=ui.run(`buildApiExamples({method:'HEAD',path:'/secure/uploads/{key}'}, '/secure/uploads/example', '', '')`);
+ assert.match(head.javascript, /Object.fromEntries/);
+});

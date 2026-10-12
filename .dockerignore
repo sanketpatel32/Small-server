@@ -3,7 +3,6 @@
 .gitignore
 .gitattributes
 README.md
-postman_collection.json
 run.bat
 run.sh
 fly.toml
