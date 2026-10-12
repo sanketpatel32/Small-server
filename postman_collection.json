@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-small-server-0001-0000-000000000001",
     "name": "Small-Server",
-    "description": "Small-Server API collection. Only /secure/* routes require X-API-Key. Secure CRUD requests carry their own key header; the Uploads folder has folder-level auth.",
+    "description": "Set base_url (defaults to the live Fly app) and api_key in collection variables. Public requests need no key; secure requests use X-API-Key. Claire gateways are mocks. Use only synthetic test data.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -27,17 +27,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/health",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "health"
-              ]
-            },
+            "url": "{{base_url}}/health",
             "description": "Liveness probe. Returns `{\"status\":\"ok\"}`."
           },
           "response": [
@@ -60,17 +50,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/docs",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "docs"
-              ]
-            },
+            "url": "{{base_url}}/docs",
             "description": "Interactive Swagger UI \u2014 open in a browser."
           }
         },
@@ -79,17 +59,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/openapi.json",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "openapi.json"
-              ]
-            },
+            "url": "{{base_url}}/openapi.json",
             "description": "Raw OpenAPI 3.x schema."
           }
         }
@@ -104,18 +74,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/lab/echo",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "echo"
-              ]
-            },
+            "url": "{{base_url}}/lab/echo",
             "description": "Echo method, path, query, headers, body, parsed JSON, and byte count."
           },
           "response": [],
@@ -143,18 +102,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "http://localhost:8795/lab/echo",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "echo"
-              ]
-            },
+            "url": "{{base_url}}/lab/echo",
             "description": "Echo JSON and raw request details.",
             "body": {
               "mode": "raw",
@@ -190,18 +138,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "http://localhost:8795/lab/echo",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "echo"
-              ]
-            },
+            "url": "{{base_url}}/lab/echo",
             "description": "Echo a raw JSON request body.",
             "body": {
               "mode": "raw",
@@ -236,18 +173,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "http://localhost:8795/lab/echo",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "echo"
-              ]
-            },
+            "url": "{{base_url}}/lab/echo",
             "description": "Echo a raw JSON request body.",
             "body": {
               "mode": "raw",
@@ -277,18 +203,7 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/lab/echo",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "echo"
-              ]
-            },
+            "url": "{{base_url}}/lab/echo",
             "description": "Echo a DELETE request."
           },
           "response": [],
@@ -314,18 +229,7 @@
                 "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "http://localhost:8795/lab/echo",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "echo"
-              ]
-            },
+            "url": "{{base_url}}/lab/echo",
             "description": "HEAD returns the same response headers without a response body."
           },
           "response": [],
@@ -346,19 +250,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/lab/status/418",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "status",
-                "418"
-              ]
-            },
+            "url": "{{base_url}}/lab/status/418",
             "description": "Return the requested HTTP status code with a JSON status/message body."
           },
           "response": []
@@ -368,19 +260,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/lab/status/204",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "status",
-                "204"
-              ]
-            },
+            "url": "{{base_url}}/lab/status/204",
             "description": "Return 204 No Content without a response body."
           },
           "response": []
@@ -390,19 +270,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/lab/delay/250",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "delay",
-                "250"
-              ]
-            },
+            "url": "{{base_url}}/lab/delay/250",
             "description": "Wait 250 milliseconds, then return {delay_ms,status}. Delay range is 0\u201310000 ms."
           },
           "response": []
@@ -412,18 +280,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/lab/redirect",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "redirect"
-              ]
-            },
+            "url": "{{base_url}}/lab/redirect",
             "description": "Redirect to a local absolute path. Defaults to /lab/echo with code 302."
           },
           "response": []
@@ -438,18 +295,7 @@
                 "value": "\"small-server-v1\""
               }
             ],
-            "url": {
-              "raw": "http://localhost:8795/lab/cache",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "cache"
-              ]
-            },
+            "url": "{{base_url}}/lab/cache",
             "description": "Return the cached response and ETag. Set If-None-Match: \"small-server-v1\" to receive 304."
           },
           "response": [],
@@ -476,18 +322,7 @@
                 "value": "*"
               }
             ],
-            "url": {
-              "raw": "http://localhost:8795/lab/cache",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "lab",
-                "cache"
-              ]
-            },
+            "url": "{{base_url}}/lab/cache",
             "description": "Matching If-None-Match returns 304 with no body."
           },
           "response": [],
@@ -529,18 +364,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/public/items",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "public",
-                "items"
-              ]
-            },
+            "url": "{{base_url}}/public/items",
             "description": "Return all public items, newest first."
           },
           "response": [
@@ -592,18 +416,7 @@
                 }
               }
             },
-            "url": {
-              "raw": "http://localhost:8795/public/items",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "public",
-                "items"
-              ]
-            },
+            "url": "{{base_url}}/public/items",
             "description": "Store ANY valid JSON payload \u2014 objects, arrays, nested structs, strings, numbers, booleans, or null. Stored verbatim and echoed back. No auth required."
           },
           "response": [
@@ -641,19 +454,7 @@
             "method": "GET",
             "header": [],
             "body": null,
-            "url": {
-              "raw": "http://localhost:8795/public/items/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "public",
-                "items",
-                "1"
-              ]
-            },
+            "url": "{{base_url}}/public/items/1",
             "description": "Get a single public item by id. Returns 404 if not found."
           },
           "response": [
@@ -705,19 +506,7 @@
                 }
               }
             },
-            "url": {
-              "raw": "http://localhost:8795/public/items/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "public",
-                "items",
-                "1"
-              ]
-            },
+            "url": "{{base_url}}/public/items/1",
             "description": "Replace a public item's payload with any new JSON. Returns the updated item, or 404."
           },
           "response": []
@@ -743,19 +532,7 @@
             "method": "DELETE",
             "header": [],
             "body": null,
-            "url": {
-              "raw": "http://localhost:8795/public/items/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "public",
-                "items",
-                "1"
-              ]
-            },
+            "url": "{{base_url}}/public/items/1",
             "description": "Delete a single public item by id. Returns {status:deleted, id} or 404."
           },
           "response": [
@@ -794,18 +571,7 @@
             "method": "DELETE",
             "header": [],
             "body": null,
-            "url": {
-              "raw": "http://localhost:8795/public/items",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "public",
-                "items"
-              ]
-            },
+            "url": "{{base_url}}/public/items",
             "description": "Delete every public item. Returns {status:cleared, scope, removed:N}."
           },
           "response": [
@@ -827,7 +593,7 @@
     },
     {
       "name": "Secure",
-      "description": "API-key-protected endpoints. Each request includes X-API-Key: secret-key-123.",
+      "description": "API-key-protected endpoints. Each request includes X-API-Key: {{api_key}}.",
       "item": [
         {
           "name": "List secure items",
@@ -851,22 +617,11 @@
             "header": [
               {
                 "key": "X-API-Key",
-                "value": "secret-key-123"
+                "value": "{{api_key}}"
               }
             ],
-            "url": {
-              "raw": "http://localhost:8795/secure/items",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "items"
-              ]
-            },
-            "description": "Return all secure items. Requires header X-API-Key: secret-key-123."
+            "url": "{{base_url}}/secure/items",
+            "description": "Return all secure items. Requires header X-API-Key: {{api_key}}."
           },
           "response": [
             {
@@ -906,7 +661,7 @@
               },
               {
                 "key": "X-API-Key",
-                "value": "secret-key-123"
+                "value": "{{api_key}}"
               }
             ],
             "body": {
@@ -918,19 +673,8 @@
                 }
               }
             },
-            "url": {
-              "raw": "http://localhost:8795/secure/items",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "items"
-              ]
-            },
-            "description": "Store ANY valid JSON payload under the secure scope. Requires header X-API-Key: secret-key-123."
+            "url": "{{base_url}}/secure/items",
+            "description": "Store ANY valid JSON payload under the secure scope. Requires header X-API-Key: {{api_key}}."
           },
           "response": [
             {
@@ -980,23 +724,11 @@
             "header": [
               {
                 "key": "X-API-Key",
-                "value": "secret-key-123"
+                "value": "{{api_key}}"
               }
             ],
             "body": null,
-            "url": {
-              "raw": "http://localhost:8795/secure/items/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "items",
-                "1"
-              ]
-            },
+            "url": "{{base_url}}/secure/items/1",
             "description": "Get a single secure item by id. Requires X-API-Key."
           },
           "response": []
@@ -1026,7 +758,7 @@
               },
               {
                 "key": "X-API-Key",
-                "value": "secret-key-123"
+                "value": "{{api_key}}"
               }
             ],
             "body": {
@@ -1038,19 +770,7 @@
                 }
               }
             },
-            "url": {
-              "raw": "http://localhost:8795/secure/items/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "items",
-                "1"
-              ]
-            },
+            "url": "{{base_url}}/secure/items/1",
             "description": "Replace a secure item's payload. Requires X-API-Key."
           },
           "response": []
@@ -1076,23 +796,11 @@
             "header": [
               {
                 "key": "X-API-Key",
-                "value": "secret-key-123"
+                "value": "{{api_key}}"
               }
             ],
             "body": null,
-            "url": {
-              "raw": "http://localhost:8795/secure/items/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "items",
-                "1"
-              ]
-            },
+            "url": "{{base_url}}/secure/items/1",
             "description": "Delete a single secure item by id. Requires X-API-Key."
           },
           "response": []
@@ -1119,22 +827,11 @@
             "header": [
               {
                 "key": "X-API-Key",
-                "value": "secret-key-123"
+                "value": "{{api_key}}"
               }
             ],
             "body": null,
-            "url": {
-              "raw": "http://localhost:8795/secure/items",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "items"
-              ]
-            },
+            "url": "{{base_url}}/secure/items",
             "description": "Delete every secure item. Requires X-API-Key."
           },
           "response": []
@@ -1150,19 +847,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/secure/uploads/status",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "uploads",
-                "status"
-              ]
-            },
+            "url": "{{base_url}}/secure/uploads/status",
             "description": "Check whether all R2 settings are present and read the 10 MiB upload limit. Credentials are never returned."
           },
           "response": []
@@ -1172,18 +857,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/secure/uploads",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "uploads"
-              ]
-            },
+            "url": "{{base_url}}/secure/uploads",
             "description": "List up to 100 files in the application uploads/ prefix. Add cursor=<opaque> to the URL for another page."
           },
           "response": []
@@ -1198,24 +872,7 @@
                 "value": "application/octet-stream"
               }
             ],
-            "url": {
-              "raw": "http://localhost:8795/secure/uploads?filename=example.txt",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "uploads"
-              ],
-              "query": [
-                {
-                  "key": "filename",
-                  "value": "example.txt"
-                }
-              ]
-            },
+            "url": "{{base_url}}/secure/uploads?filename=example.txt",
             "description": "Send nonempty raw bytes (not multipart/form-data), at most 10 MiB. Replace the body with the file content.",
             "body": {
               "mode": "raw",
@@ -1234,19 +891,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "uploads",
-                "0123456789abcdef0123456789abcdef-example.txt"
-              ]
-            },
+            "url": "{{base_url}}/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
             "description": "Replace the sample object key with the key returned by Upload raw file bytes."
           },
           "response": []
@@ -1256,19 +901,7 @@
           "request": {
             "method": "HEAD",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "uploads",
-                "0123456789abcdef0123456789abcdef-example.txt"
-              ]
-            },
+            "url": "{{base_url}}/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
             "description": "Replace the sample object key with an uploaded file key."
           },
           "response": []
@@ -1278,19 +911,7 @@
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": {
-              "raw": "http://localhost:8795/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8795",
-              "path": [
-                "secure",
-                "uploads",
-                "0123456789abcdef0123456789abcdef-example.txt"
-              ]
-            },
+            "url": "{{base_url}}/secure/uploads/0123456789abcdef0123456789abcdef-example.txt",
             "description": "Idempotently delete the file (204). Replace the sample object key with an uploaded file key."
           },
           "response": []
@@ -1306,7 +927,7 @@
           },
           {
             "key": "value",
-            "value": "secret-key-123",
+            "value": "{{api_key}}",
             "type": "string"
           },
           {
@@ -1451,6 +1072,18 @@
           }
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://small-server.fly.dev",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "",
+      "type": "string"
     }
   ]
 }
